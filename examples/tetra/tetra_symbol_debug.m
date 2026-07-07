@@ -1,0 +1,36 @@
+%% TETRA pi/4-DQPSK symbol synchronization and hard-decision debug
+% Run this script from the MATLAB project root or click Run in MATLAB.
+
+projectRoot = fileparts(fileparts(fileparts(mfilename('fullpath'))));
+addpath(projectRoot);
+startup;
+
+TARGET_FILE = '/home/lzkj/lzkj_workspace/python_docs/DMR_demo/data/tetra_dmo_20240413_430050000_baseband.wav';
+OUTPUT_DIR = fullfile(projectRoot, 'outputs', 'tetra_symbol_debug', 'interactive_latest');
+
+result = tetra.symbolDebug(TARGET_FILE, ...
+    'OutputDir', OUTPUT_DIR, ...
+    'CreateFigures', true, ...
+    'ShowFigures', true, ...
+    'SaveFigures', false);
+
+fprintf('\n=== TETRA symbol debug ===\n');
+fprintf('Input: %s\n', result.path);
+fprintf('Output: %s\n', result.outputDir);
+fprintf('Input Fs: %.0f Hz, target Fs: %.0f Hz\n', ...
+    result.inputSampleRateHz, result.targetSampleRateHz);
+fprintf('Active window: %.3f s to %.3f s (%s)\n', ...
+    result.activeInfo.startSec, result.activeInfo.endSec, result.activeInfo.mode);
+fprintf('Coarse FO: %.1f Hz, first residual correction: %.1f Hz, final residual: %.1f Hz\n', ...
+    result.coarseFrequencyOffsetHz, result.residualCorrectionHz, result.finalResidualHz);
+fprintf('Timing phase: %.2f samples, timing median error: %.4f rad\n', ...
+    result.timingPhaseSamples, result.timingErrorRad);
+fprintf('Decision variant: %s, symbols: %d, bits: %d\n', ...
+    result.decisionVariant, result.symbolCount, result.bitCount);
+fprintf('Training candidates: %d, good hits: %d\n', ...
+    result.training.candidateCount, result.training.goodCount);
+for k = 1:numel(result.training.items)
+    item = result.training.items(k);
+    fprintf('  %-10s errors=%2d/%2d frac=%.3f offset=%g\n', ...
+        item.name, item.bestErrors, item.length, item.errorFraction, item.bestOffset);
+end

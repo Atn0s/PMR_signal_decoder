@@ -1,0 +1,54 @@
+[
+  {
+    "protocol": "DMR",
+    "type": "LC_HEADER",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "color_code": 0
+    },
+    "_fo_hz": -299682.6171875
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true
+    },
+    "_fo_hz": -299682.6171875
+  },
+  {
+    "protocol": "DMR",
+    "type": "LC_HEADER",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "color_code": 0
+    },
+    "_fo_hz": 150146.484375
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true
+    },
+    "_fo_hz": 150146.484375
+  }
+]

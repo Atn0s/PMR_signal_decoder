@@ -1,0 +1,26 @@
+[
+  {
+    "protocol": "DMR",
+    "type": "LC_HEADER",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "color_code": 0
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true
+    }
+  }
+]

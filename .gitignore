@@ -1,0 +1,28 @@
+# Runtime outputs
+outputs/
+
+# MATLAB generated files
+*.asv
+*.m~
+*.mat
+*.fig
+*.slxc
+slprj/
+codegen/
+
+# Generated plots and binary captures
+*.png
+*.jpg
+*.jpeg
+*.wav
+*.iq
+*.bin
+
+# Python helper caches
+__pycache__/
+*.py[cod]
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+*~

@@ -1,0 +1,27 @@
+function cfg = config()
+%CONFIG Parameters for first-stage TETRA pi/4-DQPSK symbol experiments.
+cfg = struct();
+cfg.symbolRateHz = 18000;
+cfg.frontendSampleRateHz = 72000;
+cfg.samplesPerSymbol = 4;
+cfg.rrcAlpha = 0.35;
+cfg.rrcSpanSymbols = 10;
+cfg.slotSymbols = 255;
+cfg.slotBits = 510;
+cfg.frameSlots = 4;
+cfg.frameSymbols = 1020;
+cfg.envelopeWindowSec = 0.001;
+cfg.activeThresholdDb = 8.0;
+cfg.activeThresholdFraction = 0.35;
+cfg.activePadSec = 0.020;
+cfg.activeMaxSec = 0.350;
+cfg.previewMaxSec = 1.000;
+cfg.psdNperseg = 4096;
+cfg.channelSearchHalfWidthHz = 14000;
+cfg.timingPhaseStepSamples = 0.25;
+cfg.diffPhaseOffsetStepRad = pi / 180;
+cfg.residualCorrectionMinHz = 3.0;
+cfg.residualCorrectionMaxHz = 2500.0;
+cfg.trainingMaxErrorFraction = 0.25;
+cfg.trainingGoodErrorFraction = 0.18;
+end
