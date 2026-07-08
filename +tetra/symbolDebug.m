@@ -94,6 +94,7 @@ if bestVariantScore <= 0
         'ValidTransitionMask', sync.validTransitionMask);
     bestTraining = tetra.findTrainingSequences(bestDecision.bits, seqs, cfg);
 end
+slotReport = tetra.inferSlotCandidates(bestDecision.bits, bestTraining, seqs, cfg);
 
 result = struct();
 result.path = char(path);
@@ -118,6 +119,7 @@ result.bitCount = numel(bestDecision.bits);
 result.decisionVariant = bestDecision.variant;
 result.decisionPhaseOffsetRad = bestDecision.phaseOffsetRad;
 result.training = bestTraining;
+result.slots = slotReport;
 result.variantReports = variantReports;
 
 if p.Results.CreateFigures
@@ -135,11 +137,13 @@ if p.Results.CreateFigures
     plotDiffConstellation(bestDecision, figOptions);
     plotDecisionPreview(bestDecision, figOptions);
     plotTraining(bestTraining, variantReports, figOptions);
+    plotSlotCandidates(slotReport, figOptions);
 end
 
 save(fullfile(outputDir, 'summary.mat'), 'result', 'cfg');
 writeSummaryJson(result, fullfile(outputDir, 'summary.json'));
 writeBits(bestDecision.bits, fullfile(outputDir, 'bits_preview.txt'));
+writeSlotCandidates(slotReport, fullfile(outputDir, 'slots_preview.txt'));
 end
 
 function small = stripLargeFields(info)
@@ -373,6 +377,54 @@ ylabel(ax2, 'Score');
 finishFig(fig, figOptions, '10_training_sequence_check.png');
 end
 
+function plotSlotCandidates(slotReport, figOptions)
+fig = newFig('11 Slot Candidates', figOptions);
+cands = slotReport.candidates;
+if isempty(cands)
+    text(0.5, 0.5, 'No slot candidates', 'HorizontalAlignment', 'center');
+    axis off;
+    finishFig(fig, figOptions, '11_slot_candidates.png');
+    return;
+end
+
+hold on;
+n = min(numel(cands), 24);
+for k = 1:n
+    c = cands(k);
+    y = n - k + 1;
+    color = [0.55 0.55 0.55];
+    if c.isComplete && c.isGood
+        color = [0.10 0.50 0.25];
+    elseif c.isComplete
+        color = [0.10 0.35 0.65];
+    end
+    line([c.slotStartBit c.slotEndBit], [y y], ...
+        'LineWidth', 7, 'Color', color);
+    plot(c.trainingStartBit, y, 'o', ...
+        'MarkerFaceColor', [0.85 0.25 0.10], ...
+        'MarkerEdgeColor', 'none', ...
+        'MarkerSize', 6);
+    label = sprintf('%s %s start=%d err=%d/%d', ...
+        c.burstClass, c.trainingName, c.slotStartBit, ...
+        c.trainingErrors, c.trainingLength);
+    text(c.slotEndBit + 15, y, label, ...
+        'VerticalAlignment', 'middle', ...
+        'FontSize', 9);
+end
+grid on;
+ylim([0 n + 1]);
+xMin = min([cands(1:n).slotStartBit]);
+xMax = max([cands(1:n).slotEndBit]);
+pad = max(50, round(0.05 * max(xMax - xMin, 1)));
+xlim([xMin - pad, xMax + 10 * pad]);
+yticks(1:n);
+yticklabels(flip(arrayfun(@(x) sprintf('#%02d', x), 1:n, 'UniformOutput', false)));
+title('510-bit slot candidates inferred from training-sequence offsets');
+xlabel('Recovered bit index');
+ylabel('Candidate rank');
+finishFig(fig, figOptions, '11_slot_candidates.png');
+end
+
 function p = movingPowerDb(x, win)
 nWin = floor(numel(x) / win);
 if nWin < 1
@@ -441,4 +493,38 @@ for k = 1:n
     end
 end
 fprintf(fid, '\n');
+end
+
+function writeSlotCandidates(slotReport, path)
+fid = fopen(path, 'w');
+if fid < 0
+    error('tetra:symbolDebug:WriteSlots', 'Unable to write %s', path);
+end
+cleaner = onCleanup(@() fclose(fid));
+cands = slotReport.candidates;
+fprintf(fid, 'TETRA 510-bit slot candidates inferred from training sequences\n');
+fprintf(fid, 'candidates=%d complete=%d good=%d\n\n', ...
+    slotReport.candidateCount, slotReport.completeCount, slotReport.goodCount);
+for k = 1:numel(cands)
+    c = cands(k);
+    fprintf(fid, '#%02d %s %s slot=%d:%d complete=%d aligned=%d trainingStart=%d inSlot=%d errors=%d/%d frac=%.3f good=%d\n', ...
+        k, c.burstClass, c.trainingName, c.slotStartBit, c.slotEndBit, ...
+        c.isComplete, c.symbolAligned, c.trainingStartBit, ...
+        c.trainingStartBitInSlot, c.trainingErrors, c.trainingLength, ...
+        c.trainingErrorFraction, c.isGood);
+    if c.isComplete
+        fprintf(fid, 'bits:\n');
+        writeWrappedString(fid, c.bitString, 102);
+        fprintf(fid, 'dibits:\n');
+        writeWrappedString(fid, c.dibitString, 102);
+    end
+    fprintf(fid, '\n');
+end
+end
+
+function writeWrappedString(fid, txt, width)
+for startIdx = 1:width:numel(txt)
+    stopIdx = min(numel(txt), startIdx + width - 1);
+    fprintf(fid, '%s\n', txt(startIdx:stopIdx));
+end
 end

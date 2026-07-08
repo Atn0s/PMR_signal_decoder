@@ -66,6 +66,8 @@ Main functions:
 +tetra/pi4dqpskDecision.m
 +tetra/trainingSequences.m
 +tetra/findTrainingSequences.m
++tetra/slotLayouts.m
++tetra/inferSlotCandidates.m
 +tetra/symbolDebug.m
 ```
 
@@ -92,7 +94,7 @@ ShowFigures=true
 SaveFigures=false
 ```
 
-Running the example script opens ten processing-stage figure windows and does
+Running the example script opens eleven processing-stage figure windows and does
 not save PNG files by default.
 
 To save figures:
@@ -167,9 +169,35 @@ good hits:           5
 
 ## Suggested Next Step
 
-Move into burst and slot boundary detection:
+The first-pass burst and slot boundary debug step is now implemented:
 
-1. Use training-sequence offsets to infer burst starts.
-2. Slice 510-bit slot blocks.
-3. Distinguish DNB/DSB and normal training sequence 1/2.
-4. Prioritize `normal_2` stealing/STCH data.
+1. `tetra.findTrainingSequences` now keeps local candidate hits, not only the
+   best hit per sequence.
+2. `tetra.inferSlotCandidates` uses centered training-sequence offsets to infer
+   510-bit slot starts and ends.
+3. `tetra.symbolDebug` writes `slots_preview.txt`, stores `result.slots`, and
+   adds `11_slot_candidates`.
+
+Current DMO first-pass slot result:
+
+```text
+decision variant: standard
+training hits:    98
+slot candidates:  60 complete, 30 good
+normal_2 example: slot=908:1417, trainingStart=1152, errors=4/22
+```
+
+Current TMO comparison first-pass slot result:
+
+```text
+decision variant: conjugate
+training hits:    100
+slot candidates:  60 complete, 41 good
+normal_2 example: slot=539:1048, trainingStart=783, errors=0/22
+```
+
+Next technical step:
+
+1. Use the repeated 510-bit spacing to choose one dominant slot phase.
+2. De-duplicate overlapping DNB/DSB hypotheses that describe the same slot.
+3. Parse the `normal_2` stealing/STCH candidate payload fields.

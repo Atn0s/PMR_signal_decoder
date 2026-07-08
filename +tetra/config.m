@@ -24,4 +24,8 @@ cfg.residualCorrectionMinHz = 3.0;
 cfg.residualCorrectionMaxHz = 2500.0;
 cfg.trainingMaxErrorFraction = 0.25;
 cfg.trainingGoodErrorFraction = 0.18;
+cfg.trainingHitMinSpacingBits = 32;
+cfg.trainingMaxHitsPerSequence = 20;
+cfg.slotCandidateMaxCount = 60;
+cfg.slotCandidateMaxPerTraining = 12;
 end
