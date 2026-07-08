@@ -34,9 +34,12 @@ for k = 1:numel(training.hits)
             dibitString = dibitsToString(slotBits);
             classification = tetra.classifyDmoBurst(slotBits, def, cfg);
             payloadBlocks = tetra.extractDmoPayload(slotBits, classification, slotStart);
+            schS = decodeSchSIfPresent(classification, payloadBlocks, cfg);
+        else
+            schS = struct([]);
         end
         candidates(end+1, 1) = makeCandidate(hit, def, classification, ... %#ok<AGROW>
-            slotStart, slotEnd, isComplete, bitString, dibitString, payloadBlocks);
+            slotStart, slotEnd, isComplete, bitString, dibitString, payloadBlocks, schS);
     end
 end
 
@@ -82,13 +85,20 @@ c = struct( ...
     'bkn2StartBit', 0, ...
     'bkn2EndBit', 0, ...
     'bkn2LogicalChannel', '', ...
+    'schS', struct([]), ...
+    'schSOk', false, ...
+    'frameNumber', NaN, ...
+    'slotNumber', NaN, ...
+    'timingLabel', '', ...
+    'timingSource', '', ...
+    'timingSlotDelta', NaN, ...
     'payloadBlocks', struct([]), ...
     'bitString', '', ...
     'dibitString', '');
 end
 
 function c = makeCandidate(hit, def, cls, slotStart, slotEnd, isComplete, ...
-        bitString, dibitString, payloadBlocks)
+        bitString, dibitString, payloadBlocks, schS)
 c = emptyCandidate();
 c.slotStartBit = slotStart;
 c.slotEndBit = slotEnd;
@@ -125,9 +135,36 @@ c.bkn1LogicalChannel = cls.bkn1LogicalChannel;
 c.bkn2StartBit = cls.bkn2StartBit;
 c.bkn2EndBit = cls.bkn2EndBit;
 c.bkn2LogicalChannel = cls.bkn2LogicalChannel;
+c.schS = schS;
+if ~isempty(schS)
+    c.schSOk = schS.ok;
+    c.frameNumber = schS.frameNumber;
+    c.slotNumber = schS.slotNumber;
+    if schS.ok
+        c.timingLabel = sprintf('FN%d TN%d', schS.frameNumber, schS.slotNumber);
+        c.timingSource = 'SCH/S';
+        c.timingSlotDelta = 0;
+    end
+end
 c.payloadBlocks = payloadBlocks;
 c.bitString = bitString;
 c.dibitString = dibitString;
+end
+
+function schS = decodeSchSIfPresent(classification, payloadBlocks, cfg)
+schS = struct([]);
+if ~classification.isConfirmed || ~strcmp(classification.burstType, 'DSB')
+    return;
+end
+if isempty(payloadBlocks)
+    return;
+end
+idx = find(strcmp({payloadBlocks.blockName}, 'BKN1') & ...
+    strcmp({payloadBlocks.logicalChannelHint}, 'SCH/S'), 1);
+if isempty(idx)
+    return;
+end
+schS = tetra.decodeSchS(payloadBlocks(idx).bits, cfg);
 end
 
 function cls = incompleteClassification(def)
@@ -164,6 +201,7 @@ end
 
 function report = makeReport(candidates, defs)
 bursts = confirmedBursts(candidates);
+bursts = assignTimingFromSchS(bursts);
 payloadBlocks = collectPayloadBlocks(bursts);
 report = struct();
 report.candidates = candidates;
@@ -176,7 +214,42 @@ report.goodCount = numel(bursts);
 report.dsbCount = nnz(strcmp({bursts.burstType}, 'DSB'));
 report.dnbCount = nnz(strcmp({bursts.burstType}, 'DNB'));
 report.payloadBlockCount = numel(payloadBlocks);
+report.schSDecodedCount = countField(bursts, 'schSOk');
+report.timingAssignedCount = nnz(~isnan([bursts.frameNumber]) & ~isnan([bursts.slotNumber]));
 report.definitions = defs;
+end
+
+function bursts = assignTimingFromSchS(bursts)
+if isempty(bursts)
+    return;
+end
+refMask = [bursts.schSOk] & ~isnan([bursts.frameNumber]) & ~isnan([bursts.slotNumber]);
+refs = bursts(refMask);
+if isempty(refs)
+    return;
+end
+slotBits = bursts(1).slotBits;
+for k = 1:numel(bursts)
+    if bursts(k).schSOk
+        continue;
+    end
+    deltas = round(([bursts(k).slotStartBit] - [refs.slotStartBit]) ./ slotBits);
+    [~, bestIdx] = min(abs(deltas));
+    delta = deltas(bestIdx);
+    [fn, tn] = advanceTiming(refs(bestIdx).frameNumber, refs(bestIdx).slotNumber, delta);
+    bursts(k).frameNumber = fn;
+    bursts(k).slotNumber = tn;
+    bursts(k).timingLabel = sprintf('FN%d TN%d', fn, tn);
+    bursts(k).timingSource = 'inferred_from_SCH/S';
+    bursts(k).timingSlotDelta = delta;
+end
+end
+
+function [frameNumber, slotNumber] = advanceTiming(refFrame, refSlot, slotDelta)
+idx = (refFrame - 1) * 4 + (refSlot - 1);
+idx = mod(idx + slotDelta, 72);
+frameNumber = floor(idx / 4) + 1;
+slotNumber = mod(idx, 4) + 1;
 end
 
 function bursts = confirmedBursts(candidates)

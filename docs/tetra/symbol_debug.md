@@ -14,6 +14,7 @@ Goal:
 8. Search known TETRA training sequences as a sanity check.
 9. Infer DMO DSB/DNB slots from training-sequence offsets.
 10. Confirm DMO fixed fields and extract BKN1/BKN2 payload blocks.
+11. Decode DSB BKN1/SCH-S and assign FN/TN timing to confirmed bursts.
 
 Entry point:
 
@@ -28,8 +29,8 @@ outputs/tetra_symbol_debug/interactive_latest
 ```
 
 `tetra.symbolDebug` writes `summary.mat`, `summary.json`, `bits_preview.txt`,
-`slots_preview.txt`, and `dmo_payload_preview.txt` to the selected output
-directory.
+`slots_preview.txt`, `dmo_payload_preview.txt`, and `schs_preview.txt` to the
+selected output directory.
 The current interactive default is `ShowFigures=true` and `SaveFigures=false`,
 so the example opens eleven processing-stage figure windows and does not save
 PNG files by default.
@@ -54,3 +55,18 @@ DNB BKN2:            slot bits 287..502, 216 bits
 
 The extracted BKN blocks are still scrambled/coded/interleaved physical payload
 bits. They are suitable input for the next channel/data-link decoding stage.
+
+For DSB `BKN1/SCH-S`, the debug path now performs the first channel decode:
+
+```text
+120 scrambled SCH/S bits
+-> descramble with DSB zero colour-code seed
+-> (120,11) deinterleave
+-> RCPC rate 2/3 Viterbi decode
+-> (76,60) block-code check + 4 tail-bit check
+-> parse 60-bit DMAC-SYNC SCH/S fields
+```
+
+The parsed timing fields are `frameNumber` and `slotNumber`. `SCH/S` is layer-2
+DMAC-SYNC information, so this step is beyond pure modulation recovery, but it
+is still a narrow synchronization decode rather than full MAC/layer-3 decoding.

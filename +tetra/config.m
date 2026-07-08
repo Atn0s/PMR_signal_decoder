@@ -34,4 +34,6 @@ cfg.dmoFrequencyMaxErrorFraction = 0.10;
 cfg.dmoTailMaxErrors = 1;
 cfg.dmoTotalMaxErrorFraction = 0.18;
 cfg.dmoBurstCandidateMaxCount = 80;
+cfg.schSBlockCodeMaxErrors = 0;
+cfg.schSTailMaxErrors = 0;
 end

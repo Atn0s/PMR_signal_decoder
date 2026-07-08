@@ -44,6 +44,7 @@ IQ -> 72 kHz -> RRC matched filter -> symbol timing ->
 pi/4-DQPSK differential decisions -> bit stream ->
 training-sequence-assisted sanity check ->
 DMO DSB/DNB burst confirmation -> BKN1/BKN2 payload extraction
+-> SCH/S channel decode -> FN/TN timing assignment
 ```
 
 ## Added TETRA Files
@@ -72,6 +73,13 @@ Main functions:
 +tetra/dmoBurstDefinitions.m
 +tetra/classifyDmoBurst.m
 +tetra/extractDmoPayload.m
++tetra/scramblingSequence.m
++tetra/blockInterleave.m
++tetra/blockDeinterleave.m
++tetra/dmoBlockCodeParity.m
++tetra/rcpcDecodeRate23.m
++tetra/parseDmacSyncSchS.m
++tetra/decodeSchS.m
 +tetra/inferDmoBursts.m
 +tetra/symbolDebug.m
 ```
@@ -159,6 +167,17 @@ confirmed DMO bursts:  17
 confirmed DSB:         16
 confirmed DNB:         1 normal_1
 payload blocks:        34
+SCH/S decoded:         16
+timing assigned:       17
+```
+
+Decoded SCH/S timing in the default DMO sample:
+
+```text
+DSB run:    FN6 TN1 through FN9 TN4
+DNB normal_1 after run: inferred FN10 TN1
+SCH/S PDU: DMAC-SYNC, direct MS-MS, channel A normal mode, DM-1 no AI encryption
+SCH/S checks: blockErr=0, tailErr=0, RCPC metric=0 for all 16 decoded DSBs
 ```
 
 Training-sequence observations:
@@ -182,7 +201,7 @@ training candidates: 5
 good hits:           5
 ```
 
-## Current Payload Boundary
+## Current Decode Boundary
 
 `tetra.inferDmoBursts` currently uses DMO training offsets and fixed DMO field
 checks to confirm DSB/DNB slots:
@@ -196,15 +215,23 @@ checks to confirm DSB/DNB slots:
 4. Confirmed DNB blocks export `BKN1` and `BKN2`, each 216 bits. `normal_1`
    hints `TCH or SCH/F`; `normal_2` hints `STCH` in block 1 and `TCH or STCH`
    in block 2.
+5. Confirmed DSB `BKN1/SCH-S` is decoded through descrambling,
+   `(120,11)` deinterleaving, RCPC rate 2/3 Viterbi decoding, block-code
+   checking, and DMAC-SYNC parsing.
+6. Decoded SCH/S frame and slot numbers are used as timing references for
+   neighbouring confirmed DNB/DSB bursts.
 
-These BKN blocks are still scrambled/coded/interleaved physical payload bits.
-They are the intended handoff into the next data-link/channel-decoding stage,
-not final decoded MAC PDUs.
+SCH/S is now decoded into a layer-2 DMAC-SYNC header subset. SCH/H, SCH/F,
+STCH, TCH channel decoding and layer-3 PDU parsing are not implemented yet.
+DNB BKN1/BKN2 are still exported as scrambled/coded/interleaved physical
+payload bits unless they are later identified and decoded as SCH/F, STCH, or a
+traffic channel.
 
 Next technical step:
 
-1. Decode DSB `SCH/S` first, because it carries slot/frame timing context.
-2. Add TETRA channel decoding for DMO BKN blocks: descrambling,
-   deinterleaving/FEC, and CRC/MER checks.
-3. Use decoded SCH information to label frame/slot numbers and distinguish
-   DMO call setup, synchronization maintenance, and traffic periods.
+1. Decode DSB `SCH/H` to recover the message/addressing part paired with
+   SCH/S.
+2. Decode DNB `SCH/F` or `STCH` blocks using the same descramble/interleave/RCPC
+   family with their 216/432-bit layouts.
+3. Extend active-window processing to scan multiple active segments or a longer
+   continuous interval once timing assignment is stable.

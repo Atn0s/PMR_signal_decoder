@@ -145,6 +145,7 @@ writeSummaryJson(result, fullfile(outputDir, 'summary.json'));
 writeBits(bestDecision.bits, fullfile(outputDir, 'bits_preview.txt'));
 writeSlotCandidates(slotReport, fullfile(outputDir, 'slots_preview.txt'));
 writeDmoPayloads(slotReport, fullfile(outputDir, 'dmo_payload_preview.txt'));
+writeSchS(slotReport, fullfile(outputDir, 'schs_preview.txt'));
 end
 
 function small = stripLargeFields(info)
@@ -413,8 +414,12 @@ for k = 1:n
         'MarkerFaceColor', [0.85 0.25 0.10], ...
         'MarkerEdgeColor', 'none', ...
         'MarkerSize', 6);
-    label = sprintf('%s %s start=%d BKN1=%d BKN2=%d err=%d/%d', ...
-        c.burstType, c.trainingName, c.slotStartBit, ...
+    timingText = '';
+    if isfield(c, 'timingLabel') && ~isempty(c.timingLabel)
+        timingText = sprintf(' %s', c.timingLabel);
+    end
+    label = sprintf('%s %s%s start=%d BKN1=%d BKN2=%d err=%d/%d', ...
+        c.burstType, c.trainingName, timingText, c.slotStartBit, ...
         max(0, c.bkn1EndBit - c.bkn1StartBit + 1), ...
         max(0, c.bkn2EndBit - c.bkn2StartBit + 1), ...
         c.totalErrors, c.totalCheckedBits);
@@ -525,9 +530,10 @@ end
 cleaner = onCleanup(@() fclose(fid));
 cands = slotReport.candidates;
 fprintf(fid, 'TETRA DMO burst candidates inferred from training sequences\n');
-fprintf(fid, 'candidates=%d complete=%d confirmed=%d DSB=%d DNB=%d payloadBlocks=%d\n\n', ...
+fprintf(fid, 'candidates=%d complete=%d confirmed=%d DSB=%d DNB=%d payloadBlocks=%d schSDecoded=%d timingAssigned=%d\n\n', ...
     slotReport.candidateCount, slotReport.completeCount, slotReport.confirmedCount, ...
-    slotReport.dsbCount, slotReport.dnbCount, slotReport.payloadBlockCount);
+    slotReport.dsbCount, slotReport.dnbCount, slotReport.payloadBlockCount, ...
+    slotReport.schSDecodedCount, slotReport.timingAssignedCount);
 for k = 1:numel(cands)
     c = cands(k);
     fprintf(fid, '#%02d %s %s slot=%d:%d complete=%d confirmed=%d aligned=%d trainingStart=%d inSlot=%d hitErr=%d/%d fieldErr=%d/%d frac=%.3f\n', ...
@@ -542,6 +548,13 @@ for k = 1:numel(cands)
         fprintf(fid, 'payload: BKN1 slot=%d:%d channel=%s, BKN2 slot=%d:%d channel=%s\n', ...
             c.bkn1StartBit, c.bkn1EndBit, c.bkn1LogicalChannel, ...
             c.bkn2StartBit, c.bkn2EndBit, c.bkn2LogicalChannel);
+        if isfield(c, 'schSOk') && ~isempty(c.schS)
+            fprintf(fid, 'schs: ok=%d FN=%g TN=%g blockErr=%d tailErr=%d rcpcMetric=%g type=%s comm=%s ab=%s\n', ...
+                c.schS.ok, c.schS.frameNumber, c.schS.slotNumber, ...
+                c.schS.blockCodeErrors, c.schS.tailErrors, c.schS.rcpcMetric, ...
+                c.schS.pdu.syncPduTypeText, c.schS.communicationTypeText, ...
+                c.schS.abChannelUsageText);
+        end
     end
     if c.isComplete
         fprintf(fid, 'bits:\n');
@@ -549,6 +562,34 @@ for k = 1:numel(cands)
         fprintf(fid, 'dibits:\n');
         writeWrappedString(fid, c.dibitString, 102);
     end
+    fprintf(fid, '\n');
+end
+end
+
+function writeSchS(slotReport, path)
+fid = fopen(path, 'w');
+if fid < 0
+    error('tetra:symbolDebug:WriteSchS', 'Unable to write %s', path);
+end
+cleaner = onCleanup(@() fclose(fid));
+fprintf(fid, 'TETRA DMO SCH/S decode preview\n');
+fprintf(fid, 'confirmedBursts=%d schSDecoded=%d\n\n', ...
+    slotReport.confirmedCount, slotReport.schSDecodedCount);
+for k = 1:numel(slotReport.bursts)
+    b = slotReport.bursts(k);
+    if ~isfield(b, 'schS') || isempty(b.schS)
+        continue;
+    end
+    s = b.schS;
+    fprintf(fid, '#%02d slot=%d:%d ok=%d FN=%g TN=%g blockErr=%d tailErr=%d rcpcMetric=%g\n', ...
+        k, b.slotStartBit, b.slotEndBit, s.ok, s.frameNumber, s.slotNumber, ...
+        s.blockCodeErrors, s.tailErrors, s.rcpcMetric);
+    fprintf(fid, '  system=%s syncType=%s comm=%s ab=%s encryption=%s\n', ...
+        s.pdu.systemCodeText, s.pdu.syncPduTypeText, ...
+        s.pdu.communicationTypeText, s.pdu.abChannelUsageText, ...
+        s.pdu.airInterfaceEncryptionStateText);
+    fprintf(fid, '  bits=');
+    writeWrappedString(fid, char('0' + double(s.type1Bits(:).')), 120);
     fprintf(fid, '\n');
 end
 end

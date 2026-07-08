@@ -12,7 +12,7 @@ seqs = tetra.trainingSequences();
 defs = tetra.dmoBurstDefinitions(seqs, cfg);
 dsbDef = defs(strcmp({defs.name}, 'DSB_sync'));
 dnb2Def = defs(strcmp({defs.name}, 'DNB_normal_2'));
-dsbBkn1 = mod((1:120).', 2) ~= 0;
+dsbBkn1 = encodeSchS(makeSchSType1(1, 6));
 dsbBkn2 = mod((1:216).', 3) == 0;
 dnbBkn1 = mod((1:216).', 4) == 0;
 dnbBkn2 = mod((1:216).', 5) == 0;
@@ -30,6 +30,17 @@ idxDsbBkn1 = find([blocks.slotStartBit] == 1 & strcmp({blocks.blockName}, 'BKN1'
 idxDnbBkn2 = find([blocks.slotStartBit] == cfg.slotBits + 1 & strcmp({blocks.blockName}, 'BKN2'), 1);
 assert(~isempty(idxDsbBkn1) && isequal(blocks(idxDsbBkn1).bits, dsbBkn1));
 assert(~isempty(idxDnbBkn2) && isequal(blocks(idxDnbBkn2).bits, dnbBkn2));
+assert(dmo.schSDecodedCount >= 1);
+idxDsb = find(strcmp({dmo.bursts.burstType}, 'DSB') & [dmo.bursts.slotStartBit] == 1, 1);
+assert(~isempty(idxDsb) && dmo.bursts(idxDsb).frameNumber == 6 && dmo.bursts(idxDsb).slotNumber == 1);
+
+schSType1 = makeSchSType1(3, 12);
+schSBlock = encodeSchS(schSType1);
+schS = tetra.decodeSchS(schSBlock, cfg);
+assert(schS.ok);
+assert(schS.slotNumber == 3);
+assert(schS.frameNumber == 12);
+assert(schS.pdu.isDmacSync);
 
 sample = fullfile(pybackend.defaultPythonRoot(), 'data', 'dmr_1_78125.rawiq');
 if exist(sample, 'file') == 2
@@ -68,4 +79,62 @@ slot(def.trainingStartBit:def.trainingEndBit) = def.trainingBits;
 slot(def.tailStartBit:def.tailEndBit) = def.tailBits;
 slot(def.bkn1StartBit:def.bkn1EndBit) = bkn1(:) ~= 0;
 slot(def.bkn2StartBit:def.bkn2EndBit) = bkn2(:) ~= 0;
+end
+
+function bits = makeSchSType1(slotNumber, frameNumber)
+bits = [ ...
+    intToBits(13, 4), ... % EN 300 396-3 DMO AI
+    intToBits(0, 2), ...  % DMAC-SYNC
+    intToBits(0, 2), ...  % direct MS-MS
+    0, 0, ...             % reserved conditional bits
+    intToBits(0, 2), ...  % channel A, normal mode
+    intToBits(slotNumber - 1, 2), ...
+    intToBits(frameNumber, 5), ...
+    intToBits(0, 2), ...  % DM-1 no AI encryption
+    zeros(1, 39)] ~= 0;
+bits = bits(:);
+end
+
+function b5 = encodeSchS(type1Bits)
+parity = tetra.dmoBlockCodeParity(type1Bits);
+type2 = [type1Bits(:) ~= 0; parity; false(4, 1)];
+type3 = rcpcEncodeRate23(type2);
+type4 = tetra.blockInterleave(type3, 11);
+b5 = xor(type4, tetra.scramblingSequence(120));
+end
+
+function encoded = rcpcEncodeRate23(type2)
+type2 = type2(:) ~= 0;
+mother = false(numel(type2) * 4, 1);
+state = 0;
+for k = 1:numel(type2)
+    [out, state] = motherOutputs(state, type2(k));
+    mother(4*k-3:4*k) = out(:);
+end
+p = [1 2 5];
+encoded = false(numel(type2) * 3 / 2, 1);
+for j = 1:numel(encoded)
+    coeff = p(1 + mod(j - 1, numel(p)));
+    motherIdx = 8 * floor((j - 1) / numel(p)) + coeff;
+    encoded(j) = mother(motherIdx);
+end
+end
+
+function [out, nextState] = motherOutputs(state, inputBit)
+prev = bitget(uint8(state), 4:-1:1) ~= 0;
+u = inputBit ~= 0;
+out = [ ...
+    xor(xor(u, prev(1)), prev(4)), ...
+    xor(xor(u, prev(2)), xor(prev(3), prev(4))), ...
+    xor(xor(u, prev(1)), xor(prev(2), prev(4))), ...
+    xor(xor(u, prev(1)), xor(prev(3), prev(4)))];
+nextBits = [u, prev(1:3)];
+nextState = double(nextBits) * [8; 4; 2; 1];
+end
+
+function bits = intToBits(value, width)
+bits = false(1, width);
+for k = 1:width
+    bits(k) = bitget(uint32(value), width - k + 1) ~= 0;
+end
 end
