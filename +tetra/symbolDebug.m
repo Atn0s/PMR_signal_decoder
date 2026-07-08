@@ -94,7 +94,7 @@ if bestVariantScore <= 0
         'ValidTransitionMask', sync.validTransitionMask);
     bestTraining = tetra.findTrainingSequences(bestDecision.bits, seqs, cfg);
 end
-slotReport = tetra.inferSlotCandidates(bestDecision.bits, bestTraining, seqs, cfg);
+slotReport = tetra.inferDmoBursts(bestDecision.bits, bestTraining, seqs, cfg);
 
 result = struct();
 result.path = char(path);
@@ -144,6 +144,7 @@ save(fullfile(outputDir, 'summary.mat'), 'result', 'cfg');
 writeSummaryJson(result, fullfile(outputDir, 'summary.json'));
 writeBits(bestDecision.bits, fullfile(outputDir, 'bits_preview.txt'));
 writeSlotCandidates(slotReport, fullfile(outputDir, 'slots_preview.txt'));
+writeDmoPayloads(slotReport, fullfile(outputDir, 'dmo_payload_preview.txt'));
 end
 
 function small = stripLargeFields(info)
@@ -378,51 +379,72 @@ finishFig(fig, figOptions, '10_training_sequence_check.png');
 end
 
 function plotSlotCandidates(slotReport, figOptions)
-fig = newFig('11 Slot Candidates', figOptions);
-cands = slotReport.candidates;
-if isempty(cands)
-    text(0.5, 0.5, 'No slot candidates', 'HorizontalAlignment', 'center');
+fig = newFig('11 DMO Burst Payloads', figOptions);
+if isfield(slotReport, 'bursts')
+    rows = slotReport.bursts;
+else
+    rows = slotReport.candidates;
+end
+if isempty(rows)
+    text(0.5, 0.5, 'No confirmed DMO bursts', 'HorizontalAlignment', 'center');
     axis off;
     finishFig(fig, figOptions, '11_slot_candidates.png');
     return;
 end
 
 hold on;
-n = min(numel(cands), 24);
+n = min(numel(rows), 28);
 for k = 1:n
-    c = cands(k);
+    c = rows(k);
     y = n - k + 1;
-    color = [0.55 0.55 0.55];
-    if c.isComplete && c.isGood
-        color = [0.10 0.50 0.25];
-    elseif c.isComplete
-        color = [0.10 0.35 0.65];
+    baseColor = [0.55 0.55 0.55];
+    if strcmp(c.burstType, 'DSB')
+        baseColor = [0.10 0.35 0.65];
+    elseif strcmp(c.burstType, 'DNB') && strcmp(c.trainingName, 'normal_1')
+        baseColor = [0.10 0.50 0.25];
+    elseif strcmp(c.burstType, 'DNB') && strcmp(c.trainingName, 'normal_2')
+        baseColor = [0.80 0.35 0.10];
     end
     line([c.slotStartBit c.slotEndBit], [y y], ...
-        'LineWidth', 7, 'Color', color);
+        'LineWidth', 5, 'Color', [0.78 0.78 0.78]);
+    drawPayloadLine(c, y, c.bkn1StartBit, c.bkn1EndBit, baseColor);
+    drawPayloadLine(c, y, c.bkn2StartBit, c.bkn2EndBit, baseColor .* 0.75);
     plot(c.trainingStartBit, y, 'o', ...
         'MarkerFaceColor', [0.85 0.25 0.10], ...
         'MarkerEdgeColor', 'none', ...
         'MarkerSize', 6);
-    label = sprintf('%s %s start=%d err=%d/%d', ...
-        c.burstClass, c.trainingName, c.slotStartBit, ...
-        c.trainingErrors, c.trainingLength);
+    label = sprintf('%s %s start=%d BKN1=%d BKN2=%d err=%d/%d', ...
+        c.burstType, c.trainingName, c.slotStartBit, ...
+        max(0, c.bkn1EndBit - c.bkn1StartBit + 1), ...
+        max(0, c.bkn2EndBit - c.bkn2StartBit + 1), ...
+        c.totalErrors, c.totalCheckedBits);
     text(c.slotEndBit + 15, y, label, ...
         'VerticalAlignment', 'middle', ...
-        'FontSize', 9);
+        'FontSize', 9, ...
+        'Interpreter', 'none');
 end
 grid on;
 ylim([0 n + 1]);
-xMin = min([cands(1:n).slotStartBit]);
-xMax = max([cands(1:n).slotEndBit]);
+xMin = min([rows(1:n).slotStartBit]);
+xMax = max([rows(1:n).slotEndBit]);
 pad = max(50, round(0.05 * max(xMax - xMin, 1)));
 xlim([xMin - pad, xMax + 10 * pad]);
 yticks(1:n);
 yticklabels(flip(arrayfun(@(x) sprintf('#%02d', x), 1:n, 'UniformOutput', false)));
-title('510-bit slot candidates inferred from training-sequence offsets');
+title(sprintf('Confirmed DMO bursts and extracted payload blocks (%d shown / %d confirmed)', ...
+    n, slotReport.confirmedCount));
 xlabel('Recovered bit index');
-ylabel('Candidate rank');
+ylabel('Burst rank');
 finishFig(fig, figOptions, '11_slot_candidates.png');
+end
+
+function drawPayloadLine(c, y, startInSlot, endInSlot, color)
+if startInSlot <= 0 || endInSlot < startInSlot
+    return;
+end
+x1 = c.slotStartBit + startInSlot - 1;
+x2 = c.slotStartBit + endInSlot - 1;
+line([x1 x2], [y y], 'LineWidth', 9, 'Color', color);
 end
 
 function p = movingPowerDb(x, win)
@@ -502,22 +524,52 @@ if fid < 0
 end
 cleaner = onCleanup(@() fclose(fid));
 cands = slotReport.candidates;
-fprintf(fid, 'TETRA 510-bit slot candidates inferred from training sequences\n');
-fprintf(fid, 'candidates=%d complete=%d good=%d\n\n', ...
-    slotReport.candidateCount, slotReport.completeCount, slotReport.goodCount);
+fprintf(fid, 'TETRA DMO burst candidates inferred from training sequences\n');
+fprintf(fid, 'candidates=%d complete=%d confirmed=%d DSB=%d DNB=%d payloadBlocks=%d\n\n', ...
+    slotReport.candidateCount, slotReport.completeCount, slotReport.confirmedCount, ...
+    slotReport.dsbCount, slotReport.dnbCount, slotReport.payloadBlockCount);
 for k = 1:numel(cands)
     c = cands(k);
-    fprintf(fid, '#%02d %s %s slot=%d:%d complete=%d aligned=%d trainingStart=%d inSlot=%d errors=%d/%d frac=%.3f good=%d\n', ...
-        k, c.burstClass, c.trainingName, c.slotStartBit, c.slotEndBit, ...
-        c.isComplete, c.symbolAligned, c.trainingStartBit, ...
-        c.trainingStartBitInSlot, c.trainingErrors, c.trainingLength, ...
-        c.trainingErrorFraction, c.isGood);
+    fprintf(fid, '#%02d %s %s slot=%d:%d complete=%d confirmed=%d aligned=%d trainingStart=%d inSlot=%d hitErr=%d/%d fieldErr=%d/%d frac=%.3f\n', ...
+        k, c.burstType, c.trainingName, c.slotStartBit, c.slotEndBit, ...
+        c.isComplete, c.isConfirmed, c.symbolAligned, c.trainingStartBit, ...
+        c.trainingStartBitInSlot, c.trainingHitErrors, c.trainingLength, ...
+        c.totalErrors, c.totalCheckedBits, c.errorFraction);
+    fprintf(fid, 'fields: preamble=%d/%d training=%d/%d freq=%d/%d tail=%d\n', ...
+        c.preambleErrors, c.preambleLength, c.trainingErrors, c.trainingLength, ...
+        c.frequencyErrors, c.frequencyLength, c.tailErrors);
+    if c.isConfirmed
+        fprintf(fid, 'payload: BKN1 slot=%d:%d channel=%s, BKN2 slot=%d:%d channel=%s\n', ...
+            c.bkn1StartBit, c.bkn1EndBit, c.bkn1LogicalChannel, ...
+            c.bkn2StartBit, c.bkn2EndBit, c.bkn2LogicalChannel);
+    end
     if c.isComplete
         fprintf(fid, 'bits:\n');
         writeWrappedString(fid, c.bitString, 102);
         fprintf(fid, 'dibits:\n');
         writeWrappedString(fid, c.dibitString, 102);
     end
+    fprintf(fid, '\n');
+end
+end
+
+function writeDmoPayloads(slotReport, path)
+fid = fopen(path, 'w');
+if fid < 0
+    error('tetra:symbolDebug:WritePayloads', 'Unable to write %s', path);
+end
+cleaner = onCleanup(@() fclose(fid));
+blocks = slotReport.payloadBlocks;
+fprintf(fid, 'TETRA DMO extracted BKN payload blocks\n');
+fprintf(fid, 'confirmedBursts=%d payloadBlocks=%d\n\n', ...
+    slotReport.confirmedCount, slotReport.payloadBlockCount);
+for k = 1:numel(blocks)
+    b = blocks(k);
+    fprintf(fid, '#%02d %s %s %s slotStart=%d abs=%d:%d inSlot=%d:%d len=%d channel=%s\n', ...
+        k, b.burstType, b.trainingName, b.blockName, b.slotStartBit, ...
+        b.absoluteStartBit, b.absoluteEndBit, b.startBitInSlot, b.endBitInSlot, ...
+        b.length, b.logicalChannelHint);
+    writeWrappedString(fid, b.bitString, 108);
     fprintf(fid, '\n');
 end
 end

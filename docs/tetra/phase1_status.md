@@ -1,6 +1,6 @@
 # TETRA Phase 1 Status
 
-Last updated: 2026-07-07
+Last updated: 2026-07-08
 
 ## Project Context
 
@@ -42,7 +42,8 @@ Current processing chain:
 ```text
 IQ -> 72 kHz -> RRC matched filter -> symbol timing ->
 pi/4-DQPSK differential decisions -> bit stream ->
-training-sequence-assisted sanity check
+training-sequence-assisted sanity check ->
+DMO DSB/DNB burst confirmation -> BKN1/BKN2 payload extraction
 ```
 
 ## Added TETRA Files
@@ -68,6 +69,10 @@ Main functions:
 +tetra/findTrainingSequences.m
 +tetra/slotLayouts.m
 +tetra/inferSlotCandidates.m
++tetra/dmoBurstDefinitions.m
++tetra/classifyDmoBurst.m
++tetra/extractDmoPayload.m
++tetra/inferDmoBursts.m
 +tetra/symbolDebug.m
 ```
 
@@ -111,7 +116,11 @@ drift or reset. For synchronization and decision quality, focus on:
 06_timing_metric
 08_diff_constellation
 10_training_sequence_check
+11_slot_candidates
 ```
+
+`11_slot_candidates` now shows confirmed DMO bursts and extracted BKN payload
+regions. The filename is kept for compatibility with earlier debug output.
 
 ## Sample Files
 
@@ -144,6 +153,12 @@ recovered bits:        10114
 decision variant:      standard
 training candidates:   5
 good hits:             4
+local training hits:   98
+DMO candidates:        58 complete
+confirmed DMO bursts:  17
+confirmed DSB:         16
+confirmed DNB:         1 normal_1
+payload blocks:        34
 ```
 
 Training-sequence observations:
@@ -167,37 +182,29 @@ training candidates: 5
 good hits:           5
 ```
 
-## Suggested Next Step
+## Current Payload Boundary
 
-The first-pass burst and slot boundary debug step is now implemented:
+`tetra.inferDmoBursts` currently uses DMO training offsets and fixed DMO field
+checks to confirm DSB/DNB slots:
 
-1. `tetra.findTrainingSequences` now keeps local candidate hits, not only the
-   best hit per sequence.
-2. `tetra.inferSlotCandidates` uses centered training-sequence offsets to infer
-   510-bit slot starts and ends.
-3. `tetra.symbolDebug` writes `slots_preview.txt`, stores `result.slots`, and
-   adds `11_slot_candidates`.
+1. `sync` implies a DSB hypothesis with the synchronization training sequence at
+   slot bit 249.
+2. `normal_1` and `normal_2` imply DNB hypotheses with the normal training
+   sequence at slot bit 265.
+3. Confirmed DSB blocks export `BKN1/SCH-S` with 120 bits and `BKN2/SCH-H`
+   with 216 bits.
+4. Confirmed DNB blocks export `BKN1` and `BKN2`, each 216 bits. `normal_1`
+   hints `TCH or SCH/F`; `normal_2` hints `STCH` in block 1 and `TCH or STCH`
+   in block 2.
 
-Current DMO first-pass slot result:
-
-```text
-decision variant: standard
-training hits:    98
-slot candidates:  60 complete, 30 good
-normal_2 example: slot=908:1417, trainingStart=1152, errors=4/22
-```
-
-Current TMO comparison first-pass slot result:
-
-```text
-decision variant: conjugate
-training hits:    100
-slot candidates:  60 complete, 41 good
-normal_2 example: slot=539:1048, trainingStart=783, errors=0/22
-```
+These BKN blocks are still scrambled/coded/interleaved physical payload bits.
+They are the intended handoff into the next data-link/channel-decoding stage,
+not final decoded MAC PDUs.
 
 Next technical step:
 
-1. Use the repeated 510-bit spacing to choose one dominant slot phase.
-2. De-duplicate overlapping DNB/DSB hypotheses that describe the same slot.
-3. Parse the `normal_2` stealing/STCH candidate payload fields.
+1. Decode DSB `SCH/S` first, because it carries slot/frame timing context.
+2. Add TETRA channel decoding for DMO BKN blocks: descrambling,
+   deinterleaving/FEC, and CRC/MER checks.
+3. Use decoded SCH information to label frame/slot numbers and distinguish
+   DMO call setup, synchronization maintenance, and traffic periods.

@@ -12,7 +12,8 @@ Goal:
 6. Search symbol timing phase by differential phase clustering.
 7. Recover pi/4-DQPSK dibits and hard bits.
 8. Search known TETRA training sequences as a sanity check.
-9. Infer first-pass 510-bit slot candidates from training-sequence offsets.
+9. Infer DMO DSB/DNB slots from training-sequence offsets.
+10. Confirm DMO fixed fields and extract BKN1/BKN2 payload blocks.
 
 Entry point:
 
@@ -26,8 +27,9 @@ Primary output directory:
 outputs/tetra_symbol_debug/interactive_latest
 ```
 
-`tetra.symbolDebug` writes `summary.mat`, `summary.json`, and
-`bits_preview.txt`, and `slots_preview.txt` to the selected output directory.
+`tetra.symbolDebug` writes `summary.mat`, `summary.json`, `bits_preview.txt`,
+`slots_preview.txt`, and `dmo_payload_preview.txt` to the selected output
+directory.
 The current interactive default is `ShowFigures=true` and `SaveFigures=false`,
 so the example opens eleven processing-stage figure windows and does not save
 PNG files by default.
@@ -38,6 +40,17 @@ To save the processing-stage figures as PNG files, call:
 tetra.symbolDebug(file, 'ShowFigures', true, 'SaveFigures', true)
 ```
 
-The extra slot-boundary output is a first-pass debug aid. It assumes each known
-training sequence is centered in a 510-bit slot, then uses the recovered
-training-sequence bit offset to infer candidate slot start and end positions.
+The DMO slot output uses EN 300 396-2 field positions, not a centered-training
+shortcut:
+
+```text
+DSB sync training:    slot bit 249
+DNB normal training: slot bit 265
+DSB BKN1/SCH-S:      slot bits 129..248, 120 bits
+DSB BKN2/SCH-H:      slot bits 287..502, 216 bits
+DNB BKN1:            slot bits 49..264, 216 bits
+DNB BKN2:            slot bits 287..502, 216 bits
+```
+
+The extracted BKN blocks are still scrambled/coded/interleaved physical payload
+bits. They are suitable input for the next channel/data-link decoding stage.

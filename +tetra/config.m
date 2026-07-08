@@ -28,4 +28,10 @@ cfg.trainingHitMinSpacingBits = 32;
 cfg.trainingMaxHitsPerSequence = 20;
 cfg.slotCandidateMaxCount = 60;
 cfg.slotCandidateMaxPerTraining = 12;
+cfg.dmoPreambleMaxErrors = 2;
+cfg.dmoTrainingMaxErrorFraction = 0.18;
+cfg.dmoFrequencyMaxErrorFraction = 0.10;
+cfg.dmoTailMaxErrors = 1;
+cfg.dmoTotalMaxErrorFraction = 0.18;
+cfg.dmoBurstCandidateMaxCount = 80;
 end

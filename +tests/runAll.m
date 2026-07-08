@@ -9,15 +9,27 @@ assert(isequal(radio.normalizeProtocolNames({'dmr', 'P25', 'dpmr'}), {'DMR', 'P2
 
 cfg = tetra.config();
 seqs = tetra.trainingSequences();
-bits = mod((1:1600).', 2) == 0;
-normal2 = seqs(strcmp({seqs.name}, 'normal_2')).bits ~= 0;
-syncSeq = seqs(strcmp({seqs.name}, 'sync')).bits ~= 0;
-bits(245:245+numel(normal2)-1) = normal2;
-bits(511+237-1:511+237+numel(syncSeq)-2) = syncSeq;
+defs = tetra.dmoBurstDefinitions(seqs, cfg);
+dsbDef = defs(strcmp({defs.name}, 'DSB_sync'));
+dnb2Def = defs(strcmp({defs.name}, 'DNB_normal_2'));
+dsbBkn1 = mod((1:120).', 2) ~= 0;
+dsbBkn2 = mod((1:216).', 3) == 0;
+dnbBkn1 = mod((1:216).', 4) == 0;
+dnbBkn2 = mod((1:216).', 5) == 0;
+bits = [ ...
+    buildDmoSlot(dsbDef, dsbBkn1, dsbBkn2); ...
+    buildDmoSlot(dnb2Def, dnbBkn1, dnbBkn2)];
 training = tetra.findTrainingSequences(bits, seqs, cfg);
-slots = tetra.inferSlotCandidates(bits, training, seqs, cfg);
-assert(any(strcmp({slots.candidates.trainingName}, 'normal_2') & [slots.candidates.slotStartBit] == 1));
-assert(any(strcmp({slots.candidates.trainingName}, 'sync') & [slots.candidates.slotStartBit] == 511));
+dmo = tetra.inferDmoBursts(bits, training, seqs, cfg);
+assert(any(strcmp({dmo.bursts.burstType}, 'DSB') & [dmo.bursts.slotStartBit] == 1));
+assert(any(strcmp({dmo.bursts.burstType}, 'DNB') & ...
+    strcmp({dmo.bursts.trainingName}, 'normal_2') & [dmo.bursts.slotStartBit] == cfg.slotBits + 1));
+assert(dmo.payloadBlockCount >= 4);
+blocks = dmo.payloadBlocks;
+idxDsbBkn1 = find([blocks.slotStartBit] == 1 & strcmp({blocks.blockName}, 'BKN1'), 1);
+idxDnbBkn2 = find([blocks.slotStartBit] == cfg.slotBits + 1 & strcmp({blocks.blockName}, 'BKN2'), 1);
+assert(~isempty(idxDsbBkn1) && isequal(blocks(idxDsbBkn1).bits, dsbBkn1));
+assert(~isempty(idxDnbBkn2) && isequal(blocks(idxDnbBkn2).bits, dnbBkn2));
 
 sample = fullfile(pybackend.defaultPythonRoot(), 'data', 'dmr_1_78125.rawiq');
 if exist(sample, 'file') == 2
@@ -44,4 +56,16 @@ if exist(dpmrSample, 'file') == 2
 end
 
 fprintf('MATLAB migration smoke tests passed.\n');
+end
+
+function slot = buildDmoSlot(def, bkn1, bkn2)
+slot = false(def.slotBits, 1);
+slot(def.preambleStartBit:def.preambleEndBit) = def.preambleBits;
+if def.frequencyStartBit > 0
+    slot(def.frequencyStartBit:def.frequencyEndBit) = def.frequencyBits;
+end
+slot(def.trainingStartBit:def.trainingEndBit) = def.trainingBits;
+slot(def.tailStartBit:def.tailEndBit) = def.tailBits;
+slot(def.bkn1StartBit:def.bkn1EndBit) = bkn1(:) ~= 0;
+slot(def.bkn2StartBit:def.bkn2EndBit) = bkn2(:) ~= 0;
 end
