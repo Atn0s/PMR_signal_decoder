@@ -8,9 +8,14 @@ p.addParameter('CreateFigures', true);
 p.addParameter('ShowFigures', true);
 p.addParameter('SaveFigures', false);
 p.addParameter('MaxInputSamplesForPlot', 600000);
+p.addParameter('ActiveMaxSec', []);
+p.addParameter('ActivePadSec', []);
+p.addParameter('ActivePrePadSec', []);
+p.addParameter('ActivePostPadSec', []);
 p.parse(varargin{:});
 
 cfg = tetra.config();
+cfg = applyActiveWindowOverrides(cfg, p.Results);
 projectRoot = fileparts(fileparts(mfilename('fullpath')));
 if isempty(p.Results.OutputDir)
     stamp = datestr(now, 'yyyymmdd_HHMMSS');
@@ -146,6 +151,23 @@ writeBits(bestDecision.bits, fullfile(outputDir, 'bits_preview.txt'));
 writeSlotCandidates(slotReport, fullfile(outputDir, 'slots_preview.txt'));
 writeDmoPayloads(slotReport, fullfile(outputDir, 'dmo_payload_preview.txt'));
 writeSchS(slotReport, fullfile(outputDir, 'schs_preview.txt'));
+end
+
+function cfg = applyActiveWindowOverrides(cfg, opts)
+if ~isempty(opts.ActivePadSec)
+    cfg.activePadSec = opts.ActivePadSec;
+    cfg.activePrePadSec = opts.ActivePadSec;
+    cfg.activePostPadSec = opts.ActivePadSec;
+end
+if ~isempty(opts.ActivePrePadSec)
+    cfg.activePrePadSec = opts.ActivePrePadSec;
+end
+if ~isempty(opts.ActivePostPadSec)
+    cfg.activePostPadSec = opts.ActivePostPadSec;
+end
+if ~isempty(opts.ActiveMaxSec)
+    cfg.activeMaxSec = opts.ActiveMaxSec;
+end
 end
 
 function small = stripLargeFields(info)
@@ -418,10 +440,8 @@ for k = 1:n
     if isfield(c, 'timingLabel') && ~isempty(c.timingLabel)
         timingText = sprintf(' %s', c.timingLabel);
     end
-    label = sprintf('%s %s%s start=%d BKN1=%d BKN2=%d err=%d/%d', ...
+    label = sprintf('%s %s%s start=%d err=%d/%d', ...
         c.burstType, c.trainingName, timingText, c.slotStartBit, ...
-        max(0, c.bkn1EndBit - c.bkn1StartBit + 1), ...
-        max(0, c.bkn2EndBit - c.bkn2StartBit + 1), ...
         c.totalErrors, c.totalCheckedBits);
     text(c.slotEndBit + 15, y, label, ...
         'VerticalAlignment', 'middle', ...

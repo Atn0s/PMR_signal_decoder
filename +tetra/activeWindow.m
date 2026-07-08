@@ -42,9 +42,10 @@ else
         scores(k) = mean(pwrDb(idx)) + 0.05 * numel(idx);
     end
     [~, best] = max(scores);
-    pad = round(cfg.activePadSec * fs);
-    startSample = max(1, (runs(best, 1) - 1) * win + 1 - pad);
-    endSample = min(numel(iq), runs(best, 2) * win + pad);
+    prePad = round(getCfg(cfg, 'activePrePadSec', cfg.activePadSec) * fs);
+    postPad = round(getCfg(cfg, 'activePostPadSec', cfg.activePadSec) * fs);
+    startSample = max(1, (runs(best, 1) - 1) * win + 1 - prePad);
+    endSample = min(numel(iq), runs(best, 2) * win + postPad);
     maxSamples = round(cfg.activeMaxSec * fs);
     if endSample - startSample + 1 > maxSamples
         center = round((startSample + endSample) / 2);
@@ -73,4 +74,12 @@ d = diff([false; mask; false]);
 starts = find(d == 1);
 ends = find(d == -1) - 1;
 runs = [starts ends];
+end
+
+function value = getCfg(cfg, name, defaultValue)
+if isfield(cfg, name)
+    value = cfg.(name);
+else
+    value = defaultValue;
+end
 end

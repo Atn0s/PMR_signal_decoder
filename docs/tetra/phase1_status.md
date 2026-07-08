@@ -152,32 +152,35 @@ For `tetra_dmo_20240413_430050000_baseband.wav`:
 input sample rate:     50000 Hz
 processing sample rate: 72000 Hz
 active window:         5.177 s - 5.458 s
+long debug window:     5.177 s - 5.738 s
 coarse offset:         +187.9 Hz
 residual correction:   +200.0 Hz
 best timing phase:     0.75 samples
 timing median error:   0.0345 rad
-recovered symbols:     5058
-recovered bits:        10114
+recovered symbols:     10098 in long debug window
+recovered bits:        20194 in long debug window
 decision variant:      standard
 training candidates:   5
 good hits:             4
 local training hits:   98
-DMO candidates:        58 complete
-confirmed DMO bursts:  17
-confirmed DSB:         16
-confirmed DNB:         1 normal_1
-payload blocks:        34
-SCH/S decoded:         16
-timing assigned:       17
+DMO candidates:        59 complete
+confirmed DMO bursts:  23
+confirmed DSB:         17
+confirmed DNB:         6
+payload blocks:        46
+SCH/S decoded:         17
+timing assigned:       23
 ```
 
 Decoded SCH/S timing in the default DMO sample:
 
 ```text
 DSB run:    FN6 TN1 through FN9 TN4
-DNB normal_1 after run: inferred FN10 TN1
+following:  DNB normal_1 at FN10 TN1, FN11 TN1, FN12 TN1
+then:       DSB at FN12 TN3, DNB normal_2 at FN13 TN1
+then:       DNB normal_1 at FN14 TN1 and FN15 TN1
 SCH/S PDU: DMAC-SYNC, direct MS-MS, channel A normal mode, DM-1 no AI encryption
-SCH/S checks: blockErr=0, tailErr=0, RCPC metric=0 for all 16 decoded DSBs
+SCH/S checks: blockErr=0, tailErr=0, RCPC metric=0 for all 17 decoded DSBs
 ```
 
 Training-sequence observations:

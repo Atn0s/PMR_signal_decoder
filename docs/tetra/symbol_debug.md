@@ -41,6 +41,18 @@ To save the processing-stage figures as PNG files, call:
 tetra.symbolDebug(file, 'ShowFigures', true, 'SaveFigures', true)
 ```
 
+The active-window length can be adjusted without editing `tetra.config`:
+
+```matlab
+tetra.symbolDebug(file, ...
+    'ActivePrePadSec', 0.020, ...
+    'ActivePostPadSec', 0.300, ...
+    'ActiveMaxSec', 0.800)
+```
+
+The example script currently uses this longer post-window setting so the DMO
+debug view includes the bursts immediately following the initial DSB sequence.
+
 The DMO slot output uses EN 300 396-2 field positions, not a centered-training
 shortcut:
 
