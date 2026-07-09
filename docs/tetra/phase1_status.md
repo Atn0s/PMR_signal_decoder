@@ -265,3 +265,9 @@ TETRA documentation index:
 ```text
 docs/tetra/README.md
 ```
+
+Link-layer decode plan:
+
+```text
+docs/tetra/link_layer_decode_plan.md
+```

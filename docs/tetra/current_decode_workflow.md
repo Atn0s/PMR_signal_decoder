@@ -678,3 +678,44 @@ active window pre-pad/post-pad bits
 这项改进的核心原则是：**低能量点不是要被“修正”的 payload bit，而是要在
 burst 边界确认后从链路层输入中排除；burst 内少量错误 bit 再交给训练序列、
 固定字段、RCPC、block code、CRC/FCS 等机制处理。**
+
+## Hard bit 到 soft bit 的改进计划
+
+当前 `tetra.pi4dqpskDecision` 输出的是 hard bit：每个差分相位被直接判到最近
+的 dibit 中心，只保留 0/1 结果，不保留可靠性。这样能打通流程，但会丢掉
+有用信息：
+
+```text
+相位离理想中心有多远
+差分 transition 幅度有多高
+该 transition 是否靠近 guard/ramp 或低能量区域
+```
+
+后续建议增加 soft decision 输出：
+
+```text
+1. 对每个 dibit 输出 hard bits，同时输出 reliability/LLR。
+2. reliability 同时考虑差分相位距离和 transition 幅度。
+3. low-energy transition 不直接删除，而是赋低可靠性。
+4. burst 外 transition 仍由 burst-aware 边界过滤，不送链路层。
+5. RCPC/Viterbi 解码器支持 hard-decision 和 soft-decision 两种输入。
+```
+
+建议的数据结构：
+
+```text
+Decision {
+  bits
+  dibits
+  bitReliability
+  dibitReliability
+  phaseErrorRad
+  transitionAmplitude
+  validTransitionMask
+}
+```
+
+soft-decision 的收益主要体现在弱信号、衰落或部分 burst 内部低幅度时。对
+当前样本，hard-decision SCH/S 已经能做到 `blockErr=0`、`tailErr=0`、
+`rcpcMetric=0`，所以 soft bit 不是进入 SCH/H/STCH 的前置条件；它是后续提升
+鲁棒性的工程优化。
