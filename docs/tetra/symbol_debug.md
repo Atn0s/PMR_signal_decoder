@@ -29,10 +29,10 @@ outputs/tetra_symbol_debug/interactive_latest
 ```
 
 `tetra.symbolDebug` writes `summary.mat`, `summary.json`, `bits_preview.txt`,
-`slots_preview.txt`, `dmo_payload_preview.txt`, and `schs_preview.txt` to the
-selected output directory.
+`slots_preview.txt`, `dmo_payload_preview.txt`, `schs_preview.txt`, and
+`frequency_correction_preview.txt` to the selected output directory.
 The current interactive default is `ShowFigures=true` and `SaveFigures=false`,
-so the example opens eleven processing-stage figure windows and does not save
+so the example opens twelve processing-stage figure windows and does not save
 PNG files by default.
 
 To save the processing-stage figures as PNG files, call:
@@ -82,3 +82,14 @@ For DSB `BKN1/SCH-S`, the debug path now performs the first channel decode:
 The parsed timing fields are `frameNumber` and `slotNumber`. `SCH/S` is layer-2
 DMAC-SYNC information, so this step is beyond pure modulation recovery, but it
 is still a narrow synchronization decode rather than full MAC/layer-3 decoding.
+
+For the DSB frequency-correction field, `12_frequency_correction_check` compares
+the observed differential-symbol frequency against the theoretical field pattern:
+
+```text
+4 symbols at -6.75 kHz
+32 symbols at +2.25 kHz
+4 symbols at -6.75 kHz
+```
+
+The text version is written to `frequency_correction_preview.txt`.

@@ -107,7 +107,7 @@ ShowFigures=true
 SaveFigures=false
 ```
 
-Running the example script opens eleven processing-stage figure windows and does
+Running the example script opens twelve processing-stage figure windows and does
 not save PNG files by default.
 
 To save figures:
@@ -125,10 +125,14 @@ drift or reset. For synchronization and decision quality, focus on:
 08_diff_constellation
 10_training_sequence_check
 11_slot_candidates
+12_frequency_correction_check
 ```
 
 `11_slot_candidates` now shows confirmed DMO bursts and extracted BKN payload
 regions. The filename is kept for compatibility with earlier debug output.
+`12_frequency_correction_check` verifies the DSB frequency-correction field by
+comparing observed differential-symbol frequencies against the expected
+`-6.75 kHz / +2.25 kHz / -6.75 kHz` pattern.
 
 ## Sample Files
 
@@ -170,6 +174,7 @@ confirmed DNB:         6
 payload blocks:        46
 SCH/S decoded:         17
 timing assigned:       23
+frequency correction:  17 DSB fields, median abs error 58.5 Hz
 ```
 
 Decoded SCH/S timing in the default DMO sample:

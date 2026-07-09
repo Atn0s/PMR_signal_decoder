@@ -100,6 +100,7 @@ if bestVariantScore <= 0
     bestTraining = tetra.findTrainingSequences(bestDecision.bits, seqs, cfg);
 end
 slotReport = tetra.inferDmoBursts(bestDecision.bits, bestTraining, seqs, cfg);
+freqCorrectionReport = makeFrequencyCorrectionReport(bestDecision, slotReport, cfg);
 
 result = struct();
 result.path = char(path);
@@ -125,6 +126,7 @@ result.decisionVariant = bestDecision.variant;
 result.decisionPhaseOffsetRad = bestDecision.phaseOffsetRad;
 result.training = bestTraining;
 result.slots = slotReport;
+result.frequencyCorrection = stripFrequencyCorrectionReport(freqCorrectionReport);
 result.variantReports = variantReports;
 
 if p.Results.CreateFigures
@@ -143,6 +145,7 @@ if p.Results.CreateFigures
     plotDecisionPreview(bestDecision, figOptions);
     plotTraining(bestTraining, variantReports, figOptions);
     plotSlotCandidates(slotReport, figOptions);
+    plotFrequencyCorrection(freqCorrectionReport, figOptions);
 end
 
 save(fullfile(outputDir, 'summary.mat'), 'result', 'cfg');
@@ -151,6 +154,7 @@ writeBits(bestDecision.bits, fullfile(outputDir, 'bits_preview.txt'));
 writeSlotCandidates(slotReport, fullfile(outputDir, 'slots_preview.txt'));
 writeDmoPayloads(slotReport, fullfile(outputDir, 'dmo_payload_preview.txt'));
 writeSchS(slotReport, fullfile(outputDir, 'schs_preview.txt'));
+writeFrequencyCorrection(freqCorrectionReport, fullfile(outputDir, 'frequency_correction_preview.txt'));
 end
 
 function cfg = applyActiveWindowOverrides(cfg, opts)
@@ -172,6 +176,11 @@ end
 
 function small = stripLargeFields(info)
 small = rmfield(info, intersect(fieldnames(info), {'windowPowerDb', 'windowTimesSec'}));
+end
+
+function small = stripFrequencyCorrectionReport(report)
+small = rmfield(report, intersect(fieldnames(report), ...
+    {'observedHzByBurst', 'expectedHzByBurst', 'errorHzByBurst'}));
 end
 
 function plotInputOverview(iq, fs, figOptions, cfg, maxSamples)
@@ -472,6 +481,142 @@ x2 = c.slotStartBit + endInSlot - 1;
 line([x1 x2], [y y], 'LineWidth', 9, 'Color', color);
 end
 
+function report = makeFrequencyCorrectionReport(decision, slotReport, cfg)
+fcStartBitInSlot = 49;
+fcEndBitInSlot = 128;
+freqBits = [ones(1, 8), zeros(1, 64), ones(1, 8)] ~= 0;
+expectedPhase = expectedPhaseFromBits(freqBits);
+expectedHz = expectedPhase .* cfg.symbolRateHz ./ (2 * pi);
+nSymbols = numel(expectedHz);
+
+bursts = slotReport.bursts;
+if isempty(bursts)
+    dsb = bursts;
+else
+    dsb = bursts(strcmp({bursts.burstType}, 'DSB') & [bursts.isConfirmed]);
+end
+
+observed = NaN(numel(dsb), nSymbols);
+errors = NaN(numel(dsb), nSymbols);
+labels = cell(numel(dsb), 1);
+slotStarts = NaN(numel(dsb), 1);
+for k = 1:numel(dsb)
+    b = dsb(k);
+    slotStarts(k) = b.slotStartBit;
+    if isfield(b, 'timingLabel') && ~isempty(b.timingLabel)
+        labels{k} = b.timingLabel;
+    else
+        labels{k} = sprintf('bit %d', b.slotStartBit);
+    end
+    absStartBit = b.slotStartBit + fcStartBitInSlot - 1;
+    absEndBit = b.slotStartBit + fcEndBitInSlot - 1;
+    if mod(absStartBit, 2) ~= 1 || mod(absEndBit, 2) ~= 0
+        continue;
+    end
+    pairIdx = ((absStartBit + 1) / 2):(absEndBit / 2);
+    if pairIdx(1) < 1 || pairIdx(end) > numel(decision.diffPhaseCorrected)
+        continue;
+    end
+    obsPhase = decision.diffPhaseCorrected(pairIdx);
+    observed(k, :) = obsPhase(:).' .* cfg.symbolRateHz ./ (2 * pi);
+    errors(k, :) = wrapToPiLocal(obsPhase(:).' - expectedPhase(:).') .* cfg.symbolRateHz ./ (2 * pi);
+end
+
+report = struct();
+report.frequencyStartBitInSlot = fcStartBitInSlot;
+report.frequencyEndBitInSlot = fcEndBitInSlot;
+report.fieldBits = freqBits(:);
+report.expectedPhaseRad = expectedPhase(:);
+report.expectedHz = expectedHz(:);
+report.observedHzByBurst = observed;
+report.expectedHzByBurst = repmat(expectedHz(:).', size(observed, 1), 1);
+report.errorHzByBurst = errors;
+report.burstLabels = labels;
+report.slotStartBits = slotStarts;
+report.burstCount = numel(dsb);
+report.validBurstCount = nnz(all(~isnan(observed), 2));
+report.medianAbsErrorHzByBurst = median(abs(errors), 2, 'omitnan');
+report.maxAbsErrorHzByBurst = max(abs(errors), [], 2, 'omitnan');
+report.overallMedianAbsErrorHz = median(abs(errors(:)), 'omitnan');
+report.overallMaxAbsErrorHz = max(abs(errors(:)), [], 'omitnan');
+end
+
+function phase = expectedPhaseFromBits(bits)
+pairs = reshape(bits(:), 2, []).';
+phase = zeros(size(pairs, 1), 1);
+for k = 1:size(pairs, 1)
+    b1 = pairs(k, 1);
+    b2 = pairs(k, 2);
+    if b1 && b2
+        phase(k) = -3 * pi / 4;
+    elseif b1 && ~b2
+        phase(k) = -pi / 4;
+    elseif ~b1 && ~b2
+        phase(k) = pi / 4;
+    else
+        phase(k) = 3 * pi / 4;
+    end
+end
+end
+
+function plotFrequencyCorrection(report, figOptions)
+fig = newFig('12 Frequency Correction Check', figOptions);
+if report.validBurstCount == 0
+    text(0.5, 0.5, 'No DSB frequency-correction fields available', ...
+        'HorizontalAlignment', 'center');
+    axis off;
+    finishFig(fig, figOptions, '12_frequency_correction_check.png');
+    return;
+end
+
+validRows = find(all(~isnan(report.observedHzByBurst), 2));
+firstRow = validRows(1);
+sym = 1:numel(report.expectedHz);
+tl = tiledlayout(fig, 3, 1, 'TileSpacing', 'compact', 'Padding', 'compact');
+
+ax1 = nexttile(tl);
+stairs(ax1, sym, report.expectedHz, 'Color', [0.20 0.20 0.20], 'LineWidth', 1.8);
+hold(ax1, 'on');
+plot(ax1, sym, report.observedHzByBurst(firstRow, :), 'o-', ...
+    'Color', [0.10 0.35 0.65], 'MarkerSize', 4);
+grid(ax1, 'on');
+ylim(ax1, [-8500 4000]);
+yline(ax1, 2250, ':', 'Color', [0.10 0.55 0.20]);
+yline(ax1, -6750, ':', 'Color', [0.80 0.25 0.10]);
+title(ax1, sprintf('DSB frequency-correction field, %s', report.burstLabels{firstRow}), ...
+    'Interpreter', 'none');
+xlabel(ax1, 'Field symbol index');
+ylabel(ax1, 'Frequency (Hz)');
+legend(ax1, {'expected', 'observed'}, 'Location', 'best');
+
+ax2 = nexttile(tl);
+imagesc(ax2, sym, 1:numel(validRows), report.observedHzByBurst(validRows, :));
+set(ax2, 'YDir', 'normal');
+colormap(ax2, parula);
+cb = colorbar(ax2);
+cb.Label.String = 'Observed frequency (Hz)';
+caxis(ax2, [-7500 3000]);
+grid(ax2, 'on');
+title(ax2, 'Observed frequency-correction pattern across confirmed DSBs');
+xlabel(ax2, 'Field symbol index');
+ylabel(ax2, 'DSB');
+yticks(ax2, 1:numel(validRows));
+yticklabels(ax2, report.burstLabels(validRows));
+
+ax3 = nexttile(tl);
+bar(ax3, report.medianAbsErrorHzByBurst(validRows), ...
+    'FaceColor', [0.10 0.45 0.35], 'EdgeColor', 'none');
+grid(ax3, 'on');
+title(ax3, sprintf('Frequency-correction median abs error, overall %.1f Hz', ...
+    report.overallMedianAbsErrorHz));
+xlabel(ax3, 'DSB');
+ylabel(ax3, 'Median abs error (Hz)');
+xticks(ax3, 1:numel(validRows));
+xticklabels(ax3, report.burstLabels(validRows));
+xtickangle(ax3, 20);
+finishFig(fig, figOptions, '12_frequency_correction_check.png');
+end
+
 function p = movingPowerDb(x, win)
 nWin = floor(numel(x) / win);
 if nWin < 1
@@ -614,6 +759,34 @@ for k = 1:numel(slotReport.bursts)
 end
 end
 
+function writeFrequencyCorrection(report, path)
+fid = fopen(path, 'w');
+if fid < 0
+    error('tetra:symbolDebug:WriteFrequencyCorrection', 'Unable to write %s', path);
+end
+cleaner = onCleanup(@() fclose(fid));
+fprintf(fid, 'TETRA DSB frequency-correction verification\n');
+fprintf(fid, 'field slot bits=%d:%d bursts=%d valid=%d overallMedianAbsErrorHz=%.2f overallMaxAbsErrorHz=%.2f\n\n', ...
+    report.frequencyStartBitInSlot, report.frequencyEndBitInSlot, ...
+    report.burstCount, report.validBurstCount, ...
+    report.overallMedianAbsErrorHz, report.overallMaxAbsErrorHz);
+fprintf(fid, 'expectedHz:\n');
+fprintf(fid, '%8.1f', report.expectedHz);
+fprintf(fid, '\n\n');
+for k = 1:report.burstCount
+    fprintf(fid, '#%02d %-10s slotStart=%g medianAbsErrorHz=%.2f maxAbsErrorHz=%.2f\n', ...
+        k, report.burstLabels{k}, report.slotStartBits(k), ...
+        report.medianAbsErrorHzByBurst(k), report.maxAbsErrorHzByBurst(k));
+    if k <= size(report.observedHzByBurst, 1)
+        fprintf(fid, 'observedHz:\n');
+        fprintf(fid, '%8.1f', report.observedHzByBurst(k, :));
+        fprintf(fid, '\nerrorHz:\n');
+        fprintf(fid, '%8.1f', report.errorHzByBurst(k, :));
+        fprintf(fid, '\n');
+    end
+end
+end
+
 function writeDmoPayloads(slotReport, path)
 fid = fopen(path, 'w');
 if fid < 0
@@ -633,6 +806,10 @@ for k = 1:numel(blocks)
     writeWrappedString(fid, b.bitString, 108);
     fprintf(fid, '\n');
 end
+end
+
+function y = wrapToPiLocal(x)
+y = mod(x + pi, 2 * pi) - pi;
 end
 
 function writeWrappedString(fid, txt, width)
