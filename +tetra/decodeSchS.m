@@ -10,34 +10,24 @@ if numel(syncBlockBits) ~= 120
         'SCH/S decoding expects exactly 120 scrambled synchronization bits.');
 end
 
-descrambled = xor(syncBlockBits, tetra.scramblingSequence(120));
-type3Bits = tetra.blockDeinterleave(descrambled, 11);
-[type2Bits, rcpcInfo] = tetra.rcpcDecodeRate23(type3Bits, 80);
-
-type1Bits = type2Bits(1:60);
-rxParity = type2Bits(61:76);
-calcParity = tetra.dmoBlockCodeParity(type1Bits);
-tailBits = type2Bits(77:80);
-blockCodeErrors = nnz(rxParity ~= calcParity);
-tailErrors = nnz(tailBits);
-
+base = tetra.decodeDmoSignallingBlock(syncBlockBits, 'SCH/S', zeros(30, 1) ~= 0, cfg);
+type1Bits = base.type1Bits;
 pdu = tetra.parseDmacSyncSchS(type1Bits);
-ok = blockCodeErrors <= getCfg(cfg, 'schSBlockCodeMaxErrors', 0) && ...
-    tailErrors <= getCfg(cfg, 'schSTailMaxErrors', 0) && ...
-    pdu.isDmacSync && pdu.hasValidTiming;
+ok = base.ok && pdu.isDmacSync && pdu.hasValidTiming;
 
 decoded = struct();
 decoded.logicalChannel = 'SCH/S';
 decoded.ok = ok;
 decoded.type1Bits = type1Bits;
-decoded.type2Bits = type2Bits;
-decoded.type3Bits = type3Bits;
-decoded.descrambledBits = descrambled;
-decoded.blockCodeErrors = blockCodeErrors;
-decoded.tailErrors = tailErrors;
-decoded.rcpcMetric = rcpcInfo.metric;
-decoded.rcpcFinalState = rcpcInfo.finalState;
-decoded.rcpcEndedInZeroState = rcpcInfo.endedInZeroState;
+decoded.type2Bits = base.type2Bits;
+decoded.type3Bits = base.type3Bits;
+decoded.descrambledBits = base.descrambledBits;
+decoded.blockCodeErrors = base.blockCodeErrors;
+decoded.tailErrors = base.tailErrors;
+decoded.rcpcMetric = base.rcpcMetric;
+decoded.rcpcFinalState = base.rcpcFinalState;
+decoded.rcpcEndedInZeroState = base.rcpcEndedInZeroState;
+decoded.base = base;
 decoded.pdu = pdu;
 decoded.frameNumber = pdu.frameNumber;
 decoded.slotNumber = pdu.slotNumber;
@@ -45,12 +35,4 @@ decoded.abChannelUsage = pdu.abChannelUsage;
 decoded.abChannelUsageText = pdu.abChannelUsageText;
 decoded.communicationType = pdu.communicationType;
 decoded.communicationTypeText = pdu.communicationTypeText;
-end
-
-function value = getCfg(cfg, name, defaultValue)
-if isfield(cfg, name)
-    value = cfg.(name);
-else
-    value = defaultValue;
-end
 end

@@ -1,5 +1,4 @@
 function specs = protocolRegistry()
 %PROTOCOLREGISTRY Return protocol specs matching the Python ProtocolSpec shape.
-specs = [dmr.spec(), p25.spec(), dpmr.spec()];
+specs = [dmr.spec(), p25.spec(), dpmr.spec(), tetra.spec()];
 end
-

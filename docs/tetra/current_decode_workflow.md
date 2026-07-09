@@ -1,7 +1,7 @@
 # TETRA 当前解码工作流程
 
 本文描述当前 MATLAB 工程中的 TETRA DMO 解码实验流程，重点说明 DSB
-同步突发和 `SCH/S` 解码是如何实现的。
+同步突发、完整 `DMAC-SYNC`、DCC、STCH 和 SCH/F 尝试解码是如何实现的。
 
 当前目标不是完整 MAC、语音或协议插件接入，而是把空口 IQ 信号稳定恢复到
 可以交给数据链路层继续处理的 bit 块：
@@ -10,7 +10,10 @@
 IQ -> 72 kHz -> RRC 匹配滤波 -> 符号定时
 -> pi/4-DQPSK 差分判决 -> hard bit 流
 -> DMO DSB/DNB burst 识别 -> BKN1/BKN2 提取
--> DSB BKN1/SCH-S 解码 -> FN/TN 时序上下文
+-> DSB BKN1/SCH-S + BKN2/SCH-H 解码
+-> 完整 DMAC-SYNC 解析 -> FN/TN 时序上下文 -> DCC
+-> DNB normal_2 STCH 解码
+-> DNB normal_1 SCH/F 尝试解码，失败则保留为 TCH candidate
 ```
 
 ## 入口
@@ -26,6 +29,32 @@ run('examples/tetra/tetra_symbol_debug.m')
 ```matlab
 result = tetra.symbolDebug(file, ...)
 ```
+
+统一 PDU 输出入口：
+
+```matlab
+pdus = radio.scanFile(file, 'ProtocolNames', {'tetra'});
+lines = radio.formatLines(pdus);
+```
+
+或直接运行：
+
+```matlab
+run('tetra_cli.m')
+```
+
+`tetra.symbolDebug` 主要用于看图和物理层调试；`radio.scanFile(..., {'tetra'})`
+用于和 DMR/P25/dPMR 一样输出结构化 PDU、session 和 JSON/table 数据。
+
+TETRA-only 全文件多窗口实验入口：
+
+```matlab
+result = tetra.scanFileWindows(file);
+run('examples/tetra/tetra_full_file_scan.m')
+```
+
+该入口暂时不接入 `scanner.m`，用于先观察整段 DMO 文件中的 DSB/DNB/STCH/TCH
+candidate 和 session 时序。
 
 MATLAB 的 `+tetra`、`+common` 目录是 package 目录。例如：
 
@@ -80,7 +109,13 @@ confirmed bursts:       62
 confirmed DSB:          38
 confirmed DNB:          24
 payload blocks:         124
+MAC/control blocks:     28
 SCH/S decoded:          38
+SCH/H decoded:          38
+DMAC-SYNC decoded:      38
+DCC contexts:           38
+STCH decoded:           6
+SCH/F decoded:          0
 timing assigned:        62
 frequency correction:   38 valid DSB fields, median abs error 59.1 Hz
 ```
@@ -95,6 +130,15 @@ frequency correction:   38 valid DSB fields, median abs error 59.1 Hz
 5. FN18 附近出现 DSB，同步上下文跨过 multiframe 边界回到 FN1。
 6. 约 6.7 秒后再次出现一组连续 DSB：FN15 TN1 到 FN18 TN4。
 7. 第二组同步后继续出现 DNB normal_1 / normal_2。
+```
+
+当前已解析出的控制层信息包括：
+
+```text
+DMAC-SYNC: DM-SETUP, DM-OCCUPIED, DM-RELEASE
+DCC:       由 MNI 低 6 bit + source address 24 bit 生成
+STCH:      normal_2 中解析到 DM-INFO、DM-RELEASE、Null PDU
+SCH/F:     normal_1 会尝试解码；当前样本均未通过 block-code 校验，因此保留为 TCH candidate
 ```
 
 这只是该样本当前窗口中的观测结果，不是协议规定每次呼叫都必须这样排列。
@@ -153,8 +197,9 @@ top:    整个输入文件的 1 ms 功率包络，标出当前处理窗口 start
 bottom: 当前处理窗口附近的放大图，用来观察同步段、间隙和后续 burst
 ```
 
-这一步只是在做离线实验的局部截取。后续要做真正连续解码时，应该改成多窗口
-扫描或流式状态机，而不是只处理一个 active window。
+这一步只是在做离线图像调试的局部截取。当前已经新增
+`tetra.scanFileWindows` 做全文件多窗口扫描；后续如果要做实时接收，再把它升级
+成流式状态机，而不是只处理一个 active window。
 
 ### 3. 粗频偏和残余频偏
 
@@ -326,14 +371,22 @@ DNB normal_2:
   slot bits 287..502:  BKN2, TCH or STCH
 ```
 
-当前 DNB 的 BKN1/BKN2 已经能提取，但还没有继续做 SCH/F、STCH、TCH 的信道
-解码。因此它们现在是“可交给下一阶段的物理 payload bit 块”，还不是最终 MAC PDU
-或语音帧。
+当前 DNB 的 BKN1/BKN2 已经能继续进入控制信道解码：
 
-## DSB/SCH/S 解码实现
+```text
+normal_2 BKN1:    使用当前 DCC 解 STCH
+normal_2 BKN2:    如果 BKN1 的 secondHalfSlotStolenFlag=1，则也按 STCH 解；
+                  否则保留为 TCH candidate
+normal_1 BKN1+BKN2: 合成 432 bit 尝试 SCH/F；
+                    如果 block/tail 校验失败，则保留为 TCH candidate
+```
 
-DSB 中 `BKN1` 承载 `SCH/S`，长度为 120 bit。当前代码已经对这 120 bit 做了
-第一个同步信道解码：
+TCH/VOICE 本阶段仍不解码，只保留候选块和上下文。
+
+## DSB/SCH/S + SCH/H 解码实现
+
+DSB 中 `BKN1` 承载 `SCH/S`，长度为 120 bit；`BKN2` 承载 `SCH/H`，长度为
+216 bit。二者共同组成完整的 `DMAC-SYNC`：
 
 ```text
 DSB BKN1/SCH-S 120 scrambled bits
@@ -343,31 +396,45 @@ DSB BKN1/SCH-S 120 scrambled bits
 -> split type-2 bits into type-1 + parity + tail
 -> DMO block-code parity check
 -> parse 60-bit DMAC-SYNC SCH/S fields
+
+DSB BKN2/SCH-H 216 scrambled bits
+-> descramble with zero DCC
+-> (216,101) block deinterleave
+-> RCPC rate 2/3 hard Viterbi decode
+-> split 124 type-1 bits + 16 parity + 4 tail
+-> parse DMAC-SYNC SCH/H fields
+
+SCH/S + SCH/H -> full DMAC-SYNC -> DCC context
 ```
 
 对应函数：
 
 ```text
++tetra/decodeDmoSignallingBlock.m
 +tetra/decodeSchS.m
 +tetra/scramblingSequence.m
 +tetra/blockDeinterleave.m
 +tetra/rcpcDecodeRate23.m
 +tetra/dmoBlockCodeParity.m
 +tetra/parseDmacSyncSchS.m
++tetra/parseDmacSync.m
++tetra/dmoDcc.m
 ```
 
-### 1. SCH/S 解扰
+### 1. 解扰
 
 入口：
 
 ```matlab
 schS = tetra.decodeSchS(payloadBlocks(idx).bits, cfg);
+schH = tetra.decodeDmoSignallingBlock(payloadBlocks(idxH).bits, 'SCH/H', zeros(30, 1), cfg);
 ```
 
-`decodeSchS` 要求输入正好 120 bit：
+`decodeSchS` 内部也调用通用的 `decodeDmoSignallingBlock`。SCH/S 要求输入正好
+120 bit，SCH/H 要求输入正好 216 bit：
 
 ```matlab
-descrambled = xor(syncBlockBits, tetra.scramblingSequence(120));
+descrambled = xor(bits, tetra.scramblingSequence(inputLength, colourCodeBits));
 ```
 
 对 DSB 的 `SCH/S` 和 `SCH/H`，当前实现使用 DSB 规定的零 colour-code seed。
@@ -376,10 +443,11 @@ descrambled = xor(syncBlockBits, tetra.scramblingSequence(120));
 ### 2. 反交织
 
 ```matlab
-type3Bits = tetra.blockDeinterleave(descrambled, 11);
+type3Bits = tetra.blockDeinterleave(descrambled, interleaverA);
 ```
 
-这里是 `(120, 11)` block deinterleave。交织的作用是把空口中的连续错误打散，
+SCH/S 使用 `(120,11)`，SCH/H/STCH 使用 `(216,101)`，SCH/F 使用 `(432,103)`。
+交织的作用是把空口中的连续错误打散，
 让卷积码和块码更容易处理。接收端必须做反交织，把 bit 顺序还原到信道译码前
 的顺序。
 
@@ -389,7 +457,9 @@ type3Bits = tetra.blockDeinterleave(descrambled, 11);
 [type2Bits, rcpcInfo] = tetra.rcpcDecodeRate23(type3Bits, 80);
 ```
 
-输入 120 bit，输出 80 bit type-2 bits。当前是 hard-decision Viterbi：
+SCH/S 输入 120 bit，输出 80 bit type-2 bits；SCH/H/STCH 输入 216 bit，输出
+144 bit type-2 bits；SCH/F 输入 432 bit，输出 288 bit type-2 bits。当前是
+hard-decision Viterbi：
 
 ```text
 state count: 16
@@ -399,17 +469,18 @@ puncturing observation pattern: [1 2 5]
 branch metric: Hamming distance
 ```
 
-默认样本中所有成功 SCH/S 的 `rcpcMetric` 都是 0，说明这些同步块在硬判决层面
-没有出现需要 Viterbi 修正的错误。
+默认样本中所有成功 SCH/S/SCH-H 的 `rcpcMetric` 都是 0，说明这些同步块在硬判决
+层面没有出现需要 Viterbi 修正的错误。
 
 ### 4. type-2 拆分和块码校验
 
-80 bit type-2 被拆成：
+type-2 被拆成：
 
 ```text
-type1 bits:  bits 1..60
-parity:      bits 61..76
-tail:        bits 77..80
+SCH/S: type1 60  + parity 16 + tail 4 = 80
+SCH/H: type1 124 + parity 16 + tail 4 = 144
+STCH:  type1 124 + parity 16 + tail 4 = 144
+SCH/F: type1 268 + parity 16 + tail 4 = 288
 ```
 
 代码：
@@ -465,7 +536,41 @@ slotNumber  = TN
 
 这两个字段给出了当前 DSB 所在的 DMO multiframe 时序位置。
 
-### 6. 用 SCH/S 给其他 burst 赋时序
+### 6. DMAC-SYNC SCH/H 和 DCC
+
+`parseDmacSync` 把 SCH/S 的 60 bit 和 SCH/H 的 124 bit 合并，解析完整
+`DMAC-SYNC`。SCH/H 部分当前展开：
+
+```text
+fill bit indication
+fragmentation flag / number of SCH/F slots
+frame countdown
+destination address type/address
+source address type/address
+MNI
+message type
+message-dependent fields
+DM-SDU raw bits
+```
+
+默认样本中可见的消息类型包括：
+
+```text
+DM-SETUP
+DM-OCCUPIED
+DM-RELEASE
+```
+
+拿到 `MNI` 和 `sourceAddress` 后，代码生成 30 bit DCC：
+
+```text
+DCC = MNI low 6 bits + sourceAddress 24 bits
+```
+
+这个 DCC 用于后续 DNB 中 STCH/SCH-F 的解扰。没有有效 DCC 时，DNB 只导出
+payload，不伪造 MAC PDU。
+
+### 7. 用 SCH/S 给其他 burst 赋时序
 
 确认 DSB 并解出 SCH/S 后，`tetra.inferDmoBursts` 会把 DSB 当作时序参考点。
 对没有 SCH/S 的 DNB，代码按 slot 起点差值推算：
@@ -545,6 +650,7 @@ bits_preview.txt
 slots_preview.txt
 dmo_payload_preview.txt
 schs_preview.txt
+dmo_mac_preview.txt
 frequency_correction_preview.txt
 ```
 
@@ -565,16 +671,44 @@ symbols.
 
 ```text
 slots_preview.txt
-  候选 burst、确认 burst、字段错误、BKN 范围、SCH/S 摘要。
+  候选 burst、确认 burst、字段错误、BKN 范围、SCH/S、SCH/H、DMAC-SYNC 摘要。
 
 dmo_payload_preview.txt
   已确认 DSB/DNB 的 BKN1/BKN2 bit 块。
 
 schs_preview.txt
-  DSB BKN1/SCH-S 的解码结果，包括 FN/TN、通信类型、加密状态。
+  DSB 同步解码结果，包括 SCH/S、SCH/H、完整 DMAC-SYNC、DCC。
+
+dmo_mac_preview.txt
+  按时序列出 DSB 同步上下文、DCC、normal_2 STCH、normal_1 SCH/F 尝试结果、
+  TCH candidate。当前样本里可以看到 DM-SETUP、DM-OCCUPIED、DM-INFO、
+  DM-RELEASE 和 Null PDU。
 
 frequency_correction_preview.txt
   DSB frequency correction field 的理论值、观测值和误差。
+```
+
+统一输出示例：
+
+```text
+[TETRA_DMAC_SYNC   ] PROTO=TETRA SRC=6087104 DST=100 MNI=0 FN=6 TN=1 MSG=DM-SETUP ...
+[TETRA_STCH        ] PROTO=TETRA SRC=6087104 DST=100 MNI=0 FN=13 TN=1 LCH=STCH MSG=DM-INFO ...
+[TETRA_TCH_CANDIDATE] PROTO=TETRA SRC=6087104 DST=100 MNI=0 FN=10 TN=1 LCH=TCH ...
+[TETRA_SESSION     ] PROTO=TETRA SRC=6087104 DST=100 MNI=0 STATE=closed START=... END=...
+```
+
+这些行由 `tetra.formatPdu` 生成，底层 PDU struct 与现有协议一样包含：
+
+```text
+protocol
+type
+src
+dst
+ts
+flco
+fid
+extra
+raw_bits
 ```
 
 ## 当前边界和下一步
@@ -585,27 +719,21 @@ frequency_correction_preview.txt
 1. 从 IQ 恢复稳定 hard bit 流。
 2. 用训练序列和固定字段确认 DMO DSB/DNB。
 3. 提取 DSB/DNB 的 BKN1/BKN2。
-4. 解码 DSB BKN1/SCH-S。
-5. 拿到 DMO frame/slot 时序上下文。
-6. 用 DSB 的 SCH/S 时序给邻近 DNB 赋 FN/TN。
+4. 解码 DSB BKN1/SCH-S 和 BKN2/SCH-H。
+5. 解析完整 DMAC-SYNC，拿到 message type、地址、MNI、frame countdown。
+6. 生成 DCC，并把 DSB 上下文按时序传给后续 DNB。
+7. 解码 normal_2 的 STCH，解析 MAC PDU header 和常见 message-dependent 字段。
+8. 尝试 normal_1 的 SCH/F；失败则保留为 TCH candidate。
+9. 用 DSB 的 SCH/S 时序给邻近 DNB 赋 FN/TN。
 ```
 
 当前还没有完成：
 
 ```text
-1. DSB BKN2/SCH-H 解码。
-2. DNB SCH/F 解码。
-3. DNB normal_2 的 STCH 解码。
-4. TCH/语音业务信道解码。
-5. 连续文件级或流式多 active-window 状态跟踪。
-```
-
-因此下一步建议是：
-
-```text
-1. 优先解 DSB BKN2/SCH-H，因为它和 SCH/S 同在 DSB 中，时序已经可靠。
-2. 再解 normal_2 DNB 的 STCH，用于呼叫控制或 stealing 信息。
-3. 最后接 TCH/语音信道，进入真正的业务内容恢复。
+1. TCH/语音业务信道解码。
+2. 连续文件级或流式多 active-window 状态跟踪。
+3. 更完整的 L3/SDS/DM-SDU 业务载荷解析。
+4. soft-decision Viterbi 和更严格的 FCS/CRC 支持。
 ```
 
 ## Burst-aware 差分判决改进计划

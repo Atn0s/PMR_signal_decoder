@@ -1,9 +1,9 @@
-%% Unified DMR/P25/dPMR scanner entry
+%% Unified DMR/P25/dPMR/TETRA scanner entry
 % Edit the configuration block, then click Run in MATLAB.
 
 TARGET_FILE = '/home/lzkj/lzkj_workspace/python_docs/DMR_demo/data/dmr_1_78125.rawiq';
 
-% Use {} to try all enabled protocols, or one/more of: {'dmr'}, {'p25'}, {'dpmr'}.
+% Use {} to try all enabled protocols, or one/more of: {'dmr'}, {'p25'}, {'dpmr'}, {'tetra'}.
 PROTOCOLS = {'dmr'};
 
 % Leave SAMPLE_RATE empty to infer it from names like dmr_1_78125.rawiq.

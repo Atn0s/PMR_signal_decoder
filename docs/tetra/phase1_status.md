@@ -44,7 +44,9 @@ IQ -> 72 kHz -> RRC matched filter -> symbol timing ->
 pi/4-DQPSK differential decisions -> bit stream ->
 training-sequence-assisted sanity check ->
 DMO DSB/DNB burst confirmation -> BKN1/BKN2 payload extraction
--> SCH/S channel decode -> FN/TN timing assignment
+-> SCH/S + SCH/H channel decode -> full DMAC-SYNC parse
+-> FN/TN timing assignment -> DCC context
+-> normal_2 STCH decode -> normal_1 SCH/F attempt or TCH candidate
 ```
 
 ## Added TETRA Files
@@ -78,7 +80,20 @@ Main functions:
 +tetra/blockDeinterleave.m
 +tetra/dmoBlockCodeParity.m
 +tetra/rcpcDecodeRate23.m
++tetra/intToBits.m
++tetra/dmoDcc.m
++tetra/decodeDmoSignallingBlock.m
 +tetra/parseDmacSyncSchS.m
++tetra/parseDmacSync.m
++tetra/parseDmoMessageElements.m
++tetra/parseDmoMacPdu.m
++tetra/pdusFromSlotReport.m
++tetra/spec.m
++tetra/frontend.m
++tetra/decode.m
++tetra/postprocess.m
++tetra/dedupKey.m
++tetra/formatPdu.m
 +tetra/decodeSchS.m
 +tetra/inferDmoBursts.m
 +tetra/symbolDebug.m
@@ -180,6 +195,13 @@ confirmed DSB:         38
 confirmed DNB:         24
 payload blocks:        124
 SCH/S decoded:         38
+SCH/H decoded:         38
+DMAC-SYNC decoded:     38
+DCC contexts:          38
+MAC blocks:            28
+STCH decoded:          6
+SCH/F decoded:         0
+radio.scanFile PDUs:   68 TETRA events/sessions
 timing assigned:       62
 frequency correction:  38 DSB fields, median abs error 59.1 Hz
 ```
@@ -196,6 +218,14 @@ next DSB run:    FN15 TN1 through FN18 TN4
 later DNBs:      normal_1/normal_2 continue after the second DSB run
 SCH/S PDU: DMAC-SYNC, direct MS-MS, channel A normal mode, DM-1 no AI encryption
 SCH/S checks: blockErr=0, tailErr=0, RCPC metric=0 for all 38 decoded DSBs
+SCH/H checks: blockErr=0, tailErr=0, RCPC metric=0 for all 38 decoded DSBs
+complete DMAC-SYNC: DM-SETUP, DM-OCCUPIED, and DM-RELEASE observed
+DCC: generated from MNI low 6 bits plus source address for each valid DSB
+normal_2 STCH: decoded DM-INFO and DM-RELEASE examples
+normal_1 SCH/F: attempted; current sample normal_1 blocks fail SCH/F checks and
+therefore remain TCH candidates
+unified output: radio.scanFile(..., 'ProtocolNames', {'tetra'}) prints
+TETRA_DMAC_SYNC, TETRA_STCH, TETRA_TCH_CANDIDATE, and TETRA_SESSION records
 ```
 
 Training-sequence observations:
@@ -222,7 +252,7 @@ good hits:           5
 ## Current Decode Boundary
 
 `tetra.inferDmoBursts` currently uses DMO training offsets and fixed DMO field
-checks to confirm DSB/DNB slots:
+checks to confirm DSB/DNB slots, then performs DMO control-channel decoding:
 
 1. `sync` implies a DSB hypothesis with the synchronization training sequence at
    slot bit 249.
@@ -233,26 +263,32 @@ checks to confirm DSB/DNB slots:
 4. Confirmed DNB blocks export `BKN1` and `BKN2`, each 216 bits. `normal_1`
    hints `TCH or SCH/F`; `normal_2` hints `STCH` in block 1 and `TCH or STCH`
    in block 2.
-5. Confirmed DSB `BKN1/SCH-S` is decoded through descrambling,
-   `(120,11)` deinterleaving, RCPC rate 2/3 Viterbi decoding, block-code
-   checking, and DMAC-SYNC parsing.
-6. Decoded SCH/S frame and slot numbers are used as timing references for
-   neighbouring confirmed DNB/DSB bursts.
+5. Confirmed DSB `BKN1/SCH-S` and `BKN2/SCH-H` are decoded through
+   descrambling, block deinterleaving, RCPC rate 2/3 Viterbi decoding,
+   block-code checking, and type-1 bit extraction.
+6. SCH/S + SCH/H are combined into the full DMAC-SYNC PDU. The parser extracts
+   communication type, AB usage, frame/slot, encryption state, source and
+   destination addressing, MNI, message type, frame countdown, common
+   message-dependent fields, and retained DM-SDU raw bits.
+7. A 30-bit DCC is generated as `MNI low 6 bits + source address 24 bits`.
+8. Confirmed DNB `normal_2` BKN1 is decoded as STCH. If its MAC header says the
+   second half slot is stolen, BKN2 is also decoded as STCH; otherwise BKN2 is
+   retained as a TCH candidate.
+9. Confirmed DNB `normal_1` combines BKN1+BKN2 and attempts SCH/F decoding. If
+   SCH/F block/tail checks fail, the burst is retained as a TCH candidate and is
+   not misreported as SCH/F.
 
-SCH/S is now decoded into a layer-2 DMAC-SYNC header subset. SCH/H, SCH/F,
-STCH, TCH channel decoding and layer-3 PDU parsing are not implemented yet.
-DNB BKN1/BKN2 are still exported as scrambled/coded/interleaved physical
-payload bits unless they are later identified and decoded as SCH/F, STCH, or a
-traffic channel.
+TCH/VOICE decoding is intentionally not implemented in this phase. TCH payload
+collection, speech/data channel decode, encryption handling, and codec payload
+extraction remain the next boundary.
 
 Next technical step:
 
-1. Decode DSB `SCH/H` to recover the message/addressing part paired with
-   SCH/S.
-2. Decode DNB `SCH/F` or `STCH` blocks using the same descramble/interleave/RCPC
-   family with their 216/432-bit layouts.
-3. Extend active-window processing to scan multiple active segments or a longer
+1. Add a DMO call-state layer that groups DM-SETUP, DM-OCCUPIED, STCH, release,
+   and TCH candidates into one traffic session.
+2. Extend active-window processing to scan multiple active segments or a longer
    continuous interval once timing assignment is stable.
+3. After the control path is stable, add TCH/VOICE payload collection and decode.
 
 Detailed current workflow documentation:
 

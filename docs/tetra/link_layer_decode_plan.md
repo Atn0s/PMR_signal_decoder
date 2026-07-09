@@ -375,3 +375,40 @@ summary
 4. 能解释至少一个 normal_2 STCH。
 5. 能把 normal_1 DNB 分类为 SCH/F success 或 TCH candidate。
 ```
+
+## 当前实现状态
+
+已实现到阶段 6，TCH/VOICE 暂不做：
+
+```text
+1. decodeDmoSignallingBlock 已支持 SCH/S、SCH/H、STCH、SCH/F。
+2. decodeSchS 已迁移到通用信令块解码器，旧字段保持兼容。
+3. DSB BKN2/SCH-H 已解码，当前样本 38/38 通过 block/tail 校验。
+4. parseDmacSync 已合并 SCH/S + SCH/H，输出完整 DMAC-SYNC 摘要。
+5. DCC 已由 MNI 低 6 bit + source address 24 bit 生成，并作为 DNB 解扰上下文。
+6. normal_2 STCH 已解码，当前样本解析到 DM-INFO、DM-RELEASE、Null PDU。
+7. normal_1 SCH/F 已尝试解码；当前样本均未通过 block-code 校验，因此保留为 TCH candidate。
+```
+
+当前样本验收结果：
+
+```text
+confirmed bursts:       62
+DSB / DNB:              38 / 24
+SCH/S decoded:          38
+SCH/H decoded:          38
+DMAC-SYNC decoded:      38
+DCC contexts:           38
+MAC/control blocks:     28
+STCH decoded:           6
+SCH/F decoded:          0
+MAC PDU decoded:        6
+```
+
+新增输出：
+
+```text
+schs_preview.txt      SCH/S、SCH/H、完整 DMAC-SYNC、DCC
+dmo_mac_preview.txt   DSB context、STCH、SCH/F attempt、TCH candidate
+radio.scanFile        TETRA_DMAC_SYNC、TETRA_STCH、TETRA_TCH_CANDIDATE、TETRA_SESSION
+```

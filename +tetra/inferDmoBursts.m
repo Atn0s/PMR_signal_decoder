@@ -12,7 +12,7 @@ defs = tetra.dmoBurstDefinitions(seqs, cfg);
 candidates = repmat(emptyCandidate(), 0, 1);
 
 if ~isfield(training, 'hits') || isempty(training.hits)
-    report = makeReport(candidates, defs);
+    report = makeReport(candidates, defs, cfg);
     return;
 end
 
@@ -28,24 +28,23 @@ for k = 1:numel(training.hits)
         dibitString = '';
         payloadBlocks = struct([]);
         classification = incompleteClassification(def);
+        link = emptyDmoLink();
         if isComplete
             slotBits = bits(slotStart:slotEnd);
             bitString = bitsToString(slotBits);
             dibitString = dibitsToString(slotBits);
             classification = tetra.classifyDmoBurst(slotBits, def, cfg);
             payloadBlocks = tetra.extractDmoPayload(slotBits, classification, slotStart);
-            schS = decodeSchSIfPresent(classification, payloadBlocks, cfg);
-        else
-            schS = struct([]);
+            link = decodeDsbSyncIfPresent(classification, payloadBlocks, cfg);
         end
         candidates(end+1, 1) = makeCandidate(hit, def, classification, ... %#ok<AGROW>
-            slotStart, slotEnd, isComplete, bitString, dibitString, payloadBlocks, schS);
+            slotStart, slotEnd, isComplete, bitString, dibitString, payloadBlocks, link);
     end
 end
 
 candidates = sortCandidates(candidates);
 candidates = limitCandidates(candidates, cfg);
-report = makeReport(candidates, defs);
+report = makeReport(candidates, defs, cfg);
 end
 
 function c = emptyCandidate()
@@ -87,6 +86,21 @@ c = struct( ...
     'bkn2LogicalChannel', '', ...
     'schS', struct([]), ...
     'schSOk', false, ...
+    'schH', struct([]), ...
+    'schHOk', false, ...
+    'dmacSync', struct([]), ...
+    'dmacSyncOk', false, ...
+    'dccBits', false(30, 1), ...
+    'dccValid', false, ...
+    'dccText', '', ...
+    'dmoContext', struct([]), ...
+    'contextValid', false, ...
+    'macBlocks', struct([]), ...
+    'stchBlocks', struct([]), ...
+    'stchDecodedCount', 0, ...
+    'schF', struct([]), ...
+    'schFOk', false, ...
+    'schFStatus', '', ...
     'frameNumber', NaN, ...
     'slotNumber', NaN, ...
     'timingLabel', '', ...
@@ -98,7 +112,7 @@ c = struct( ...
 end
 
 function c = makeCandidate(hit, def, cls, slotStart, slotEnd, isComplete, ...
-        bitString, dibitString, payloadBlocks, schS)
+        bitString, dibitString, payloadBlocks, link)
 c = emptyCandidate();
 c.slotStartBit = slotStart;
 c.slotEndBit = slotEnd;
@@ -135,13 +149,20 @@ c.bkn1LogicalChannel = cls.bkn1LogicalChannel;
 c.bkn2StartBit = cls.bkn2StartBit;
 c.bkn2EndBit = cls.bkn2EndBit;
 c.bkn2LogicalChannel = cls.bkn2LogicalChannel;
-c.schS = schS;
-if ~isempty(schS)
-    c.schSOk = schS.ok;
-    c.frameNumber = schS.frameNumber;
-    c.slotNumber = schS.slotNumber;
-    if schS.ok
-        c.timingLabel = sprintf('FN%d TN%d', schS.frameNumber, schS.slotNumber);
+c.schS = link.schS;
+c.schSOk = link.schSOk;
+c.schH = link.schH;
+c.schHOk = link.schHOk;
+c.dmacSync = link.dmacSync;
+c.dmacSyncOk = link.dmacSyncOk;
+c.dccBits = link.dccBits;
+c.dccValid = link.dccValid;
+c.dccText = link.dccText;
+if ~isempty(link.schS)
+    c.frameNumber = link.schS.frameNumber;
+    c.slotNumber = link.schS.slotNumber;
+    if link.schS.ok
+        c.timingLabel = sprintf('FN%d TN%d', link.schS.frameNumber, link.schS.slotNumber);
         c.timingSource = 'SCH/S';
         c.timingSlotDelta = 0;
     end
@@ -151,8 +172,21 @@ c.bitString = bitString;
 c.dibitString = dibitString;
 end
 
-function schS = decodeSchSIfPresent(classification, payloadBlocks, cfg)
-schS = struct([]);
+function link = emptyDmoLink()
+link = struct( ...
+    'schS', struct([]), ...
+    'schSOk', false, ...
+    'schH', struct([]), ...
+    'schHOk', false, ...
+    'dmacSync', struct([]), ...
+    'dmacSyncOk', false, ...
+    'dccBits', false(30, 1), ...
+    'dccValid', false, ...
+    'dccText', '');
+end
+
+function link = decodeDsbSyncIfPresent(classification, payloadBlocks, cfg)
+link = emptyDmoLink();
 if ~classification.isConfirmed || ~strcmp(classification.burstType, 'DSB')
     return;
 end
@@ -161,10 +195,25 @@ if isempty(payloadBlocks)
 end
 idx = find(strcmp({payloadBlocks.blockName}, 'BKN1') & ...
     strcmp({payloadBlocks.logicalChannelHint}, 'SCH/S'), 1);
-if isempty(idx)
+if ~isempty(idx)
+    link.schS = tetra.decodeSchS(payloadBlocks(idx).bits, cfg);
+    link.schSOk = link.schS.ok;
+end
+idxH = find(strcmp({payloadBlocks.blockName}, 'BKN2') & ...
+    strcmp({payloadBlocks.logicalChannelHint}, 'SCH/H'), 1);
+if ~isempty(idxH)
+    link.schH = tetra.decodeDmoSignallingBlock(payloadBlocks(idxH).bits, ...
+        'SCH/H', zeros(30, 1) ~= 0, cfg);
+    link.schHOk = link.schH.ok;
+end
+if isempty(link.schS) || isempty(link.schH) || ~link.schS.ok || ~link.schH.ok
     return;
 end
-schS = tetra.decodeSchS(payloadBlocks(idx).bits, cfg);
+link.dmacSync = tetra.parseDmacSync(link.schS.type1Bits, link.schH.type1Bits, cfg);
+link.dmacSyncOk = link.dmacSync.ok;
+link.dccBits = link.dmacSync.dccBits;
+link.dccValid = link.dmacSync.dccValid;
+link.dccText = link.dmacSync.dccText;
 end
 
 function cls = incompleteClassification(def)
@@ -199,14 +248,17 @@ cls = struct( ...
     'bkn2LogicalChannel', def.bkn2LogicalChannel);
 end
 
-function report = makeReport(candidates, defs)
+function report = makeReport(candidates, defs, cfg)
 bursts = confirmedBursts(candidates);
 bursts = assignTimingFromSchS(bursts);
+bursts = decodeTrafficSignalling(bursts, cfg);
 payloadBlocks = collectPayloadBlocks(bursts);
+macBlocks = collectMacBlocks(bursts);
 report = struct();
 report.candidates = candidates;
 report.bursts = bursts;
 report.payloadBlocks = payloadBlocks;
+report.macBlocks = macBlocks;
 report.candidateCount = numel(candidates);
 report.completeCount = countField(candidates, 'isComplete');
 report.confirmedCount = numel(bursts);
@@ -214,7 +266,14 @@ report.goodCount = numel(bursts);
 report.dsbCount = nnz(strcmp({bursts.burstType}, 'DSB'));
 report.dnbCount = nnz(strcmp({bursts.burstType}, 'DNB'));
 report.payloadBlockCount = numel(payloadBlocks);
+report.macBlockCount = numel(macBlocks);
 report.schSDecodedCount = countField(bursts, 'schSOk');
+report.schHDecodedCount = countField(bursts, 'schHOk');
+report.dmacSyncDecodedCount = countField(bursts, 'dmacSyncOk');
+report.dccContextCount = countField(bursts, 'dccValid');
+report.stchDecodedCount = sumNumericField(bursts, 'stchDecodedCount');
+report.schFDecodedCount = countField(bursts, 'schFOk');
+report.macPduDecodedCount = countMacPdus(macBlocks);
 report.timingAssignedCount = nnz(~isnan([bursts.frameNumber]) & ~isnan([bursts.slotNumber]));
 report.definitions = defs;
 end
@@ -242,6 +301,253 @@ for k = 1:numel(bursts)
     bursts(k).timingLabel = sprintf('FN%d TN%d', fn, tn);
     bursts(k).timingSource = 'inferred_from_SCH/S';
     bursts(k).timingSlotDelta = delta;
+end
+end
+
+function bursts = decodeTrafficSignalling(bursts, cfg)
+if isempty(bursts)
+    return;
+end
+context = emptyDmoContext();
+for k = 1:numel(bursts)
+    if bursts(k).dmacSyncOk && bursts(k).dccValid
+        context = contextFromSync(bursts(k).dmacSync, bursts(k));
+    end
+    bursts(k).dmoContext = context;
+    bursts(k).contextValid = context.valid;
+    if ~strcmp(bursts(k).burstType, 'DNB')
+        continue;
+    end
+    if strcmp(bursts(k).trainingName, 'normal_2')
+        bursts(k) = decodeNormal2Stch(bursts(k), context, cfg);
+    elseif strcmp(bursts(k).trainingName, 'normal_1')
+        bursts(k) = decodeNormal1SchF(bursts(k), context, cfg);
+    end
+end
+end
+
+function burst = decodeNormal2Stch(burst, context, cfg)
+blocks = burst.payloadBlocks;
+idx1 = find(strcmp({blocks.blockName}, 'BKN1'), 1);
+if isempty(idx1)
+    return;
+end
+stch1 = decodeMacBlockFromPayload(blocks(idx1), 'STCH', context, cfg);
+stch1.frameNumber = burst.frameNumber;
+stch1.slotNumber = burst.slotNumber;
+burst.stchBlocks = appendStruct(burst.stchBlocks, stch1);
+burst.macBlocks = appendStruct(burst.macBlocks, stch1);
+if stch1.decodeOk
+    burst.stchDecodedCount = burst.stchDecodedCount + 1;
+end
+
+decodeSecondHalf = stch1.decodeOk && isfield(stch1.pdu, 'secondHalfSlotStolenFlag') && ...
+    stch1.pdu.secondHalfSlotStolenFlag;
+idx2 = find(strcmp({blocks.blockName}, 'BKN2'), 1);
+if isempty(idx2)
+    return;
+end
+if decodeSecondHalf
+    stch2 = decodeMacBlockFromPayload(blocks(idx2), 'STCH', context, cfg);
+    stch2.frameNumber = burst.frameNumber;
+    stch2.slotNumber = burst.slotNumber;
+    burst.stchBlocks = appendStruct(burst.stchBlocks, stch2);
+    burst.macBlocks = appendStruct(burst.macBlocks, stch2);
+    if stch2.decodeOk
+        burst.stchDecodedCount = burst.stchDecodedCount + 1;
+    end
+else
+    tch = skippedMacBlockFromPayload(blocks(idx2), 'TCH', context, ...
+        'BKN2 kept as TCH candidate; first-half STCH did not steal second half');
+    tch.frameNumber = burst.frameNumber;
+    tch.slotNumber = burst.slotNumber;
+    burst.macBlocks = appendStruct(burst.macBlocks, tch);
+end
+end
+
+function burst = decodeNormal1SchF(burst, context, cfg)
+blocks = burst.payloadBlocks;
+idx1 = find(strcmp({blocks.blockName}, 'BKN1'), 1);
+idx2 = find(strcmp({blocks.blockName}, 'BKN2'), 1);
+if isempty(idx1) || isempty(idx2)
+    return;
+end
+bits = [blocks(idx1).bits(:); blocks(idx2).bits(:)];
+meta = combinedBlockMeta(blocks(idx1), blocks(idx2));
+schF = decodeMacBlock(meta, bits, 'SCH/F', context, cfg);
+schF.frameNumber = burst.frameNumber;
+schF.slotNumber = burst.slotNumber;
+burst.schF = schF;
+burst.schFOk = schF.decodeOk;
+if schF.decodeOk
+    burst.schFStatus = 'SCH/F decoded';
+else
+    burst.schFStatus = 'SCH/F failed or skipped; keep as TCH candidate';
+end
+burst.macBlocks = appendStruct(burst.macBlocks, schF);
+end
+
+function block = decodeMacBlockFromPayload(payloadBlock, logicalChannel, context, cfg)
+block = decodeMacBlock(payloadBlock, payloadBlock.bits, logicalChannel, context, cfg);
+end
+
+function block = decodeMacBlock(meta, bits, logicalChannel, context, cfg)
+block = macBlockFromMeta(meta, logicalChannel, context);
+block.rawBitLength = numel(bits);
+block.rawBitString = bitsToString(bits);
+if ~context.valid
+    block.status = 'skipped: no DCC context';
+    return;
+end
+block.decodeAttempted = true;
+try
+    decoded = tetra.decodeDmoSignallingBlock(bits, logicalChannel, context.dccBits, cfg);
+    block.decoded = decoded;
+    block.blockCodeErrors = decoded.blockCodeErrors;
+    block.tailErrors = decoded.tailErrors;
+    block.rcpcMetric = decoded.rcpcMetric;
+    block.decodeOk = decoded.ok;
+    if decoded.ok
+        block.pdu = tetra.parseDmoMacPdu(decoded.type1Bits, logicalChannel, context);
+        block.decodeOk = block.pdu.ok;
+        block.status = 'decoded';
+    else
+        block.status = sprintf('channel decode failed: blockErr=%d tailErr=%d metric=%g', ...
+            decoded.blockCodeErrors, decoded.tailErrors, decoded.rcpcMetric);
+    end
+catch err
+    block.status = sprintf('decode error: %s', err.message);
+end
+end
+
+function block = skippedMacBlockFromPayload(payloadBlock, logicalChannel, context, status)
+block = macBlockFromMeta(payloadBlock, logicalChannel, context);
+block.status = status;
+block.rawBitLength = payloadBlock.length;
+block.rawBitString = payloadBlock.bitString;
+end
+
+function block = macBlockFromMeta(meta, logicalChannel, context)
+block = emptyMacBlock();
+block.logicalChannel = logicalChannel;
+block.blockName = meta.blockName;
+block.blockIndex = meta.blockIndex;
+block.burstType = meta.burstType;
+block.trainingName = meta.trainingName;
+block.slotStartBit = meta.slotStartBit;
+block.startBitInSlot = meta.startBitInSlot;
+block.endBitInSlot = meta.endBitInSlot;
+block.absoluteStartBit = meta.absoluteStartBit;
+block.absoluteEndBit = meta.absoluteEndBit;
+block.frameNumber = context.frameNumber;
+block.slotNumber = context.slotNumber;
+block.contextValid = context.valid;
+block.contextSourceSlotStartBit = context.slotStartBit;
+block.contextMessageTypeText = context.messageTypeText;
+end
+
+function meta = combinedBlockMeta(block1, block2)
+meta = block1;
+meta.blockName = 'BKN1+BKN2';
+meta.blockIndex = 12;
+meta.logicalChannelHint = 'SCH/F or TCH';
+meta.startBitInSlot = block1.startBitInSlot;
+meta.endBitInSlot = block2.endBitInSlot;
+meta.absoluteStartBit = block1.absoluteStartBit;
+meta.absoluteEndBit = block2.absoluteEndBit;
+meta.length = block1.length + block2.length;
+meta.bits = [block1.bits(:); block2.bits(:)];
+meta.bitString = bitsToString(meta.bits);
+end
+
+function context = emptyDmoContext()
+context = struct( ...
+    'valid', false, ...
+    'slotStartBit', NaN, ...
+    'frameNumber', NaN, ...
+    'slotNumber', NaN, ...
+    'communicationType', NaN, ...
+    'communicationTypeText', '', ...
+    'abChannelUsage', NaN, ...
+    'abChannelUsageText', '', ...
+    'airInterfaceEncryptionState', NaN, ...
+    'airInterfaceEncryptionStateText', '', ...
+    'sourceAddress', NaN, ...
+    'destinationAddress', NaN, ...
+    'mobileNetworkIdentity', NaN, ...
+    'messageType', NaN, ...
+    'messageTypeText', '', ...
+    'service', '', ...
+    'dccBits', false(30, 1), ...
+    'dccText', '');
+end
+
+function context = contextFromSync(sync, burst)
+context = emptyDmoContext();
+context.valid = sync.dccValid;
+context.slotStartBit = burst.slotStartBit;
+context.frameNumber = sync.frameNumber;
+context.slotNumber = sync.slotNumber;
+context.communicationType = sync.communicationType;
+context.communicationTypeText = sync.communicationTypeText;
+context.abChannelUsage = sync.abChannelUsage;
+context.abChannelUsageText = sync.abChannelUsageText;
+context.airInterfaceEncryptionState = sync.airInterfaceEncryptionState;
+context.airInterfaceEncryptionStateText = sync.airInterfaceEncryptionStateText;
+context.sourceAddress = sync.sourceAddress;
+context.destinationAddress = sync.destinationAddress;
+context.mobileNetworkIdentity = sync.mobileNetworkIdentity;
+context.messageType = sync.messageType;
+context.messageTypeText = sync.messageTypeText;
+context.service = syncService(sync);
+context.dccBits = sync.dccBits;
+context.dccText = sync.dccText;
+end
+
+function text = syncService(sync)
+text = '';
+if isfield(sync, 'message') && isfield(sync.message, 'messageDependent')
+    md = sync.message.messageDependent;
+    if isfield(md, 'circuitModeTypeText')
+        text = md.circuitModeTypeText;
+    end
+end
+end
+
+function block = emptyMacBlock()
+block = struct( ...
+    'logicalChannel', '', ...
+    'blockName', '', ...
+    'blockIndex', 0, ...
+    'burstType', '', ...
+    'trainingName', '', ...
+    'slotStartBit', NaN, ...
+    'startBitInSlot', 0, ...
+    'endBitInSlot', 0, ...
+    'absoluteStartBit', NaN, ...
+    'absoluteEndBit', NaN, ...
+    'frameNumber', NaN, ...
+    'slotNumber', NaN, ...
+    'contextValid', false, ...
+    'contextSourceSlotStartBit', NaN, ...
+    'contextMessageTypeText', '', ...
+    'decodeAttempted', false, ...
+    'decodeOk', false, ...
+    'status', '', ...
+    'blockCodeErrors', NaN, ...
+    'tailErrors', NaN, ...
+    'rcpcMetric', NaN, ...
+    'decoded', struct([]), ...
+    'pdu', struct([]), ...
+    'rawBitLength', 0, ...
+    'rawBitString', '');
+end
+
+function out = appendStruct(out, item)
+if isempty(out)
+    out = item;
+else
+    out(end+1, 1) = item;
 end
 end
 
@@ -302,6 +608,20 @@ for k = 1:numel(bursts)
 end
 end
 
+function macBlocks = collectMacBlocks(bursts)
+macBlocks = struct([]);
+for k = 1:numel(bursts)
+    if ~isfield(bursts(k), 'macBlocks') || isempty(bursts(k).macBlocks)
+        continue;
+    end
+    if isempty(macBlocks)
+        macBlocks = bursts(k).macBlocks(:);
+    else
+        macBlocks = [macBlocks; bursts(k).macBlocks(:)]; %#ok<AGROW>
+    end
+end
+end
+
 function candidates = sortCandidates(candidates)
 if isempty(candidates)
     return;
@@ -351,6 +671,23 @@ if isempty(items)
     n = 0;
 else
     n = nnz([items.(fieldName)]);
+end
+end
+
+function n = sumNumericField(items, fieldName)
+if isempty(items)
+    n = 0;
+else
+    n = sum([items.(fieldName)]);
+end
+end
+
+function n = countMacPdus(macBlocks)
+n = 0;
+for k = 1:numel(macBlocks)
+    if macBlocks(k).decodeOk && ~isempty(macBlocks(k).pdu)
+        n = n + 1;
+    end
 end
 end
 

@@ -1,5 +1,5 @@
 function pdus = scanFile(path, varargin)
-%SCANFILE Scan an offline IQ file for DMR, P25, and dPMR metadata.
+%SCANFILE Scan an offline IQ file for DMR, P25, dPMR, and TETRA metadata.
 p = inputParser;
 p.addParameter('FreqList', []);
 p.addParameter('BlindSearch', false);

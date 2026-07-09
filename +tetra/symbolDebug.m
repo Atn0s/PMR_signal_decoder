@@ -155,6 +155,7 @@ writeBits(bestDecision.bits, fullfile(outputDir, 'bits_preview.txt'));
 writeSlotCandidates(slotReport, fullfile(outputDir, 'slots_preview.txt'));
 writeDmoPayloads(slotReport, fullfile(outputDir, 'dmo_payload_preview.txt'));
 writeSchS(slotReport, fullfile(outputDir, 'schs_preview.txt'));
+writeDmoMac(slotReport, fullfile(outputDir, 'dmo_mac_preview.txt'));
 writeFrequencyCorrection(freqCorrectionReport, fullfile(outputDir, 'frequency_correction_preview.txt'));
 end
 
@@ -927,10 +928,12 @@ end
 cleaner = onCleanup(@() fclose(fid));
 cands = slotReport.candidates;
 fprintf(fid, 'TETRA DMO burst candidates inferred from training sequences\n');
-fprintf(fid, 'candidates=%d complete=%d confirmed=%d DSB=%d DNB=%d payloadBlocks=%d schSDecoded=%d timingAssigned=%d\n\n', ...
+fprintf(fid, 'candidates=%d complete=%d confirmed=%d DSB=%d DNB=%d payloadBlocks=%d macBlocks=%d schSDecoded=%d schHDecoded=%d dmacSync=%d stchDecoded=%d schFDecoded=%d timingAssigned=%d\n\n', ...
     slotReport.candidateCount, slotReport.completeCount, slotReport.confirmedCount, ...
     slotReport.dsbCount, slotReport.dnbCount, slotReport.payloadBlockCount, ...
-    slotReport.schSDecodedCount, slotReport.timingAssignedCount);
+    slotReport.macBlockCount, slotReport.schSDecodedCount, slotReport.schHDecodedCount, ...
+    slotReport.dmacSyncDecodedCount, slotReport.stchDecodedCount, ...
+    slotReport.schFDecodedCount, slotReport.timingAssignedCount);
 for k = 1:numel(cands)
     c = cands(k);
     fprintf(fid, '#%02d %s %s slot=%d:%d complete=%d confirmed=%d aligned=%d trainingStart=%d inSlot=%d hitErr=%d/%d fieldErr=%d/%d frac=%.3f\n', ...
@@ -952,6 +955,17 @@ for k = 1:numel(cands)
                 c.schS.pdu.syncPduTypeText, c.schS.communicationTypeText, ...
                 c.schS.abChannelUsageText);
         end
+        if isfield(c, 'schHOk') && ~isempty(c.schH)
+            fprintf(fid, 'schh: ok=%d blockErr=%d tailErr=%d rcpcMetric=%g\n', ...
+                c.schH.ok, c.schH.blockCodeErrors, c.schH.tailErrors, c.schH.rcpcMetric);
+        end
+        if isfield(c, 'dmacSyncOk') && ~isempty(c.dmacSync)
+            fprintf(fid, 'sync: ok=%d msg=%s src=%s dst=%s mni=%s fc=%s dccValid=%d dcc=%s\n', ...
+                c.dmacSync.ok, c.dmacSync.messageTypeText, ...
+                intText(c.dmacSync.sourceAddress), intText(c.dmacSync.destinationAddress), ...
+                intText(c.dmacSync.mobileNetworkIdentity), c.dmacSync.frameCountdownText, ...
+                c.dmacSync.dccValid, c.dmacSync.dccText);
+        end
     end
     if c.isComplete
         fprintf(fid, 'bits:\n');
@@ -969,9 +983,11 @@ if fid < 0
     error('tetra:symbolDebug:WriteSchS', 'Unable to write %s', path);
 end
 cleaner = onCleanup(@() fclose(fid));
-fprintf(fid, 'TETRA DMO SCH/S decode preview\n');
-fprintf(fid, 'confirmedBursts=%d schSDecoded=%d\n\n', ...
-    slotReport.confirmedCount, slotReport.schSDecodedCount);
+fprintf(fid, 'TETRA DMO synchronization decode preview\n');
+fprintf(fid, 'confirmedBursts=%d schSDecoded=%d schHDecoded=%d dmacSync=%d dccContexts=%d\n\n', ...
+    slotReport.confirmedCount, slotReport.schSDecodedCount, ...
+    slotReport.schHDecodedCount, slotReport.dmacSyncDecodedCount, ...
+    slotReport.dccContextCount);
 for k = 1:numel(slotReport.bursts)
     b = slotReport.bursts(k);
     if ~isfield(b, 'schS') || isempty(b.schS)
@@ -985,8 +1001,99 @@ for k = 1:numel(slotReport.bursts)
         s.pdu.systemCodeText, s.pdu.syncPduTypeText, ...
         s.pdu.communicationTypeText, s.pdu.abChannelUsageText, ...
         s.pdu.airInterfaceEncryptionStateText);
+    if isfield(b, 'schH') && ~isempty(b.schH)
+        fprintf(fid, '  schh ok=%d blockErr=%d tailErr=%d rcpcMetric=%g\n', ...
+            b.schH.ok, b.schH.blockCodeErrors, b.schH.tailErrors, b.schH.rcpcMetric);
+    end
+    if isfield(b, 'dmacSync') && ~isempty(b.dmacSync)
+        y = b.dmacSync;
+        fprintf(fid, '  dmac-sync ok=%d msg=%s frameCountdown=%s src=%s dst=%s mni=%s dccValid=%d dcc=%s\n', ...
+            y.ok, y.messageTypeText, y.frameCountdownText, ...
+            intText(y.sourceAddress), intText(y.destinationAddress), ...
+            intText(y.mobileNetworkIdentity), y.dccValid, y.dccText);
+        fprintf(fid, '  addressTypes: src=%s dst=%s fill=%d frag=%d numSchF=%s\n', ...
+            y.sourceAddressTypeText, y.destinationAddressTypeText, ...
+            y.fillBitIndication, y.fragmentationFlag, intText(y.numberOfSchFSlots));
+        if isfield(y.message, 'messageDependent')
+            fprintf(fid, '  messageDependent=%s dmSdu=%s\n', ...
+                compactJson(y.message.messageDependent), compactJson(y.message.dmSdu));
+        end
+    end
     fprintf(fid, '  bits=');
     writeWrappedString(fid, char('0' + double(s.type1Bits(:).')), 120);
+    fprintf(fid, '\n');
+end
+end
+
+function writeDmoMac(slotReport, path)
+fid = fopen(path, 'w');
+if fid < 0
+    error('tetra:symbolDebug:WriteDmoMac', 'Unable to write %s', path);
+end
+cleaner = onCleanup(@() fclose(fid));
+fprintf(fid, 'TETRA DMO MAC/control decode preview\n');
+fprintf(fid, 'confirmed=%d DSB=%d DNB=%d macBlocks=%d macPdus=%d stchDecoded=%d schFDecoded=%d\n\n', ...
+    slotReport.confirmedCount, slotReport.dsbCount, slotReport.dnbCount, ...
+    slotReport.macBlockCount, slotReport.macPduDecodedCount, ...
+    slotReport.stchDecodedCount, slotReport.schFDecodedCount);
+
+for k = 1:numel(slotReport.bursts)
+    b = slotReport.bursts(k);
+    timing = timingText(b);
+    fprintf(fid, '#%02d %s %-8s %s bit=%d:%d\n', ...
+        k, timing, b.burstType, b.trainingName, b.slotStartBit, b.slotEndBit);
+    if strcmp(b.burstType, 'DSB') && isfield(b, 'dmacSync') && ~isempty(b.dmacSync)
+        s = b.dmacSync;
+        fprintf(fid, '  DSB/SYNC ok=%d msg=%s comm=%s ab=%s enc=%s src=%s dst=%s mni=%s fc=%s dccValid=%d\n', ...
+            s.ok, s.messageTypeText, s.communicationTypeText, s.abChannelUsageText, ...
+            s.airInterfaceEncryptionStateText, intText(s.sourceAddress), ...
+            intText(s.destinationAddress), intText(s.mobileNetworkIdentity), ...
+            s.frameCountdownText, s.dccValid);
+        fprintf(fid, '  DCC=%s\n', s.dccText);
+        fprintf(fid, '  messageDependent=%s dmSdu=%s\n', ...
+            compactJson(s.message.messageDependent), compactJson(s.message.dmSdu));
+    end
+    if isfield(b, 'macBlocks') && ~isempty(b.macBlocks)
+        for m = 1:numel(b.macBlocks)
+            mb = b.macBlocks(m);
+            fprintf(fid, '  %s %-9s %-9s attempted=%d ok=%d status=%s ctx=%s\n', ...
+                mb.blockName, mb.logicalChannel, mb.trainingName, ...
+                mb.decodeAttempted, mb.decodeOk, mb.status, contextText(mb));
+            if ~isempty(mb.decoded)
+                fprintf(fid, '    channel: blockErr=%s tailErr=%s rcpcMetric=%s\n', ...
+                    intText(mb.blockCodeErrors), intText(mb.tailErrors), numText(mb.rcpcMetric));
+            end
+            if ~isempty(mb.pdu)
+                fprintf(fid, '    pdu=%s', fieldText(mb.pdu, 'pduName'));
+                if isfield(mb.pdu, 'messageTypeText')
+                    fprintf(fid, ' msg=%s', mb.pdu.messageTypeText);
+                end
+                if isfield(mb.pdu, 'secondHalfSlotStolenFlag')
+                    fprintf(fid, ' secondHalfStolen=%d', mb.pdu.secondHalfSlotStolenFlag);
+                end
+                if isfield(mb.pdu, 'nullPduFlag')
+                    fprintf(fid, ' null=%d', mb.pdu.nullPduFlag);
+                end
+                fprintf(fid, '\n');
+                if isfield(mb.pdu, 'sourceAddress')
+                    fprintf(fid, '    addr: src=%s dst=%s mni=%s fc=%s enc=%s\n', ...
+                        intText(mb.pdu.sourceAddress), intText(mb.pdu.destinationAddress), ...
+                        intText(mb.pdu.mobileNetworkIdentity), ...
+                        fieldText(mb.pdu, 'frameCountdownText'), ...
+                        fieldText(mb.pdu, 'airInterfaceEncryptionStateText'));
+                end
+                if isfield(mb.pdu, 'message')
+                    fprintf(fid, '    messageDependent=%s dmSdu=%s\n', ...
+                        compactJson(mb.pdu.message.messageDependent), ...
+                        compactJson(mb.pdu.message.dmSdu));
+                elseif isfield(mb.pdu, 'uPlaneDmSduBitCount')
+                    fprintf(fid, '    uPlaneDmSduBits=%d\n', mb.pdu.uPlaneDmSduBitCount);
+                elseif isfield(mb.pdu, 'dmSduBitCount')
+                    fprintf(fid, '    dmSduBits=%d\n', mb.pdu.dmSduBitCount);
+                end
+            end
+        end
+    end
     fprintf(fid, '\n');
 end
 end
@@ -1042,6 +1149,70 @@ end
 
 function y = wrapToPiLocal(x)
 y = mod(x + pi, 2 * pi) - pi;
+end
+
+function txt = timingText(burst)
+if isfield(burst, 'timingLabel') && ~isempty(burst.timingLabel)
+    txt = burst.timingLabel;
+elseif isfield(burst, 'frameNumber') && ~isnan(burst.frameNumber)
+    txt = sprintf('FN%d TN%d', burst.frameNumber, burst.slotNumber);
+else
+    txt = 'FN? TN?';
+end
+end
+
+function txt = contextText(block)
+if ~isfield(block, 'contextValid') || ~block.contextValid
+    txt = 'no-DCC';
+else
+    txt = sprintf('DCC from bit %s/%s', ...
+        intText(block.contextSourceSlotStartBit), block.contextMessageTypeText);
+end
+end
+
+function txt = intText(value)
+if islogical(value)
+    value = double(value);
+end
+if isempty(value) || (isnumeric(value) && any(isnan(value(:))))
+    txt = 'n/a';
+elseif isnumeric(value) && isscalar(value)
+    txt = sprintf('%.0f', value);
+else
+    txt = char('0' + double(value(:).'));
+end
+end
+
+function txt = numText(value)
+if isempty(value) || isnan(value)
+    txt = 'n/a';
+else
+    txt = sprintf('%g', value);
+end
+end
+
+function txt = fieldText(s, name)
+if isstruct(s) && isfield(s, name)
+    value = s.(name);
+    if ischar(value) || isstring(value)
+        txt = char(value);
+    else
+        txt = intText(value);
+    end
+else
+    txt = 'n/a';
+end
+end
+
+function txt = compactJson(value)
+try
+    txt = jsonencode(value);
+catch
+    txt = '<unprintable>';
+end
+if numel(txt) > 240
+    txt = [txt(1:237) '...'];
+end
 end
 
 function writeWrappedString(fid, txt, width)

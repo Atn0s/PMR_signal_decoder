@@ -5,17 +5,19 @@ configuration block at the top, and click Run.
 
 ## Script Entrypoints
 
-- `scanner.m`: unified DMR/P25/dPMR scanner.
+- `scanner.m`: unified DMR/P25/dPMR/TETRA scanner.
 - `dmr_cli.m`: DMR-only scanner.
 - `p25_cli.m`: P25-only scanner.
 - `dpmr_cli.m`: dPMR-only scanner.
+- `tetra_cli.m`: TETRA DMO control scanner.
+- `examples/tetra/tetra_full_file_scan.m`: TETRA-only full-file multi-window scan.
 - `open_radio_analyzer.m`: opens the interactive analyzer UI.
 
 Typical edit:
 
 ```matlab
 TARGET_FILE = '/path/to/signal.rawiq';
-PROTOCOLS = {'dmr'};      % scanner.m only
+PROTOCOLS = {'dmr'};      % scanner.m only; use {'tetra'} for TETRA DMO
 SAMPLE_RATE = [];         % infer from filename, or set 48000 / 78125 / etc.
 BLIND_SEARCH = false;     % true for unknown wideband offsets
 SHOW_FIGURE = true;
@@ -38,11 +40,18 @@ or pass `PythonExecutable` in programmatic calls.
 
 ```matlab
 pdus = radio.scanFile('/path/to/signal.rawiq', 'ProtocolNames', {'dmr'});
+pdus = radio.scanFile('/path/to/tetra.wav', 'ProtocolNames', {'tetra'});
+
+result = tetra.scanFileWindows('/path/to/tetra.wav', ...
+    'OutputDir', 'outputs/tetra_full_file_scan/manual');
 
 result = viz.analyzeFile('/path/to/signal.rawiq', ...
     'ProtocolNames', {'dmr'}, ...
     'CreateFigure', true);
 ```
+
+`tetra.scanFileWindows` is a TETRA-only experiment entry point and is not wired
+through `scanner.m` yet.
 
 ## Command-Line Smoke Test
 

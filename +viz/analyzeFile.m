@@ -91,6 +91,8 @@ end
 
 function y = runFrontend(protocol, iq, fs)
 switch lower(char(protocol))
+    case 'tetra'
+        y = abs(iq(:));
     case 'dpmr'
         y = dpmr.frontend(iq, fs, dpmr.config());
     case 'p25'

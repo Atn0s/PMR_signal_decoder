@@ -5,7 +5,7 @@ addpath(root);
 
 assert(common.detectSampleRate('data/dmr_1_78125.rawiq') == 78125);
 assert(common.detectSampleRate('data/synthesized_wideband_2.5MHz.rawiq') == 2500000);
-assert(isequal(radio.normalizeProtocolNames({'dmr', 'P25', 'dpmr'}), {'DMR', 'P25', 'dPMR'}));
+assert(isequal(radio.normalizeProtocolNames({'dmr', 'P25', 'dpmr', 'tetra'}), {'DMR', 'P25', 'dPMR', 'TETRA'}));
 
 cfg = tetra.config();
 seqs = tetra.trainingSequences();
@@ -64,6 +64,16 @@ if exist(dpmrSample, 'file') == 2
         'PipelineBackend', 'matlab', 'DecoderBackend', 'matlab');
     assert(isstruct(pdus));
     fprintf('dPMR sample decoded PDUs: %d\n', numel(pdus));
+end
+
+tetraSample = fullfile(pybackend.defaultPythonRoot(), 'data', 'tetra_dmo_20240413_430050000_baseband.wav');
+if exist(tetraSample, 'file') == 2
+    pdus = radio.scanFile(tetraSample, 'ProtocolNames', {'tetra'}, ...
+        'PipelineBackend', 'matlab', 'DecoderBackend', 'matlab');
+    assert(isstruct(pdus));
+    assert(any(strcmp({pdus.type}, 'TETRA_DMAC_SYNC')));
+    assert(any(strcmp({pdus.type}, 'TETRA_SESSION')));
+    fprintf('TETRA sample decoded PDUs/events: %d\n', numel(pdus));
 end
 
 fprintf('MATLAB migration smoke tests passed.\n');
