@@ -46,12 +46,17 @@ The active-window length can be adjusted without editing `tetra.config`:
 ```matlab
 tetra.symbolDebug(file, ...
     'ActivePrePadSec', 0.020, ...
-    'ActivePostPadSec', 0.300, ...
-    'ActiveMaxSec', 0.800)
+    'ActivePostPadSec', 2.200, ...
+    'ActiveMaxSec', 2.500)
 ```
 
 The example script currently uses this longer post-window setting so the DMO
-debug view includes the bursts immediately following the initial DSB sequence.
+debug view includes the initial DSB sequence, following DNB payload bursts, the
+next visible DSB synchronization sequence, and the DNB payloads after it.
+
+`02_active_window` contains a full-file envelope preview and a zoomed view around
+the selected active window. `11_slot_candidates` contains a full confirmed-burst
+overview plus a detailed BKN view for the first confirmed bursts.
 
 The DMO slot output uses EN 300 396-2 field positions, not a centered-training
 shortcut:
@@ -93,3 +98,10 @@ the observed differential-symbol frequency against the theoretical field pattern
 ```
 
 The text version is written to `frequency_correction_preview.txt`.
+
+For a detailed Chinese walkthrough of the current implementation, especially the
+DSB `SCH/S` decode path, see:
+
+```text
+docs/tetra/current_decode_workflow.md
+```

@@ -1,6 +1,6 @@
 # TETRA Phase 1 Status
 
-Last updated: 2026-07-08
+Last updated: 2026-07-09
 
 ## Project Context
 
@@ -129,7 +129,9 @@ drift or reset. For synchronization and decision quality, focus on:
 ```
 
 `11_slot_candidates` now shows confirmed DMO bursts and extracted BKN payload
-regions. The filename is kept for compatibility with earlier debug output.
+regions. In the longer debug window it also includes a full-window burst
+overview so the next synchronization sequence and later DNB payloads are visible.
+The filename is kept for compatibility with earlier debug output.
 `12_frequency_correction_check` verifies the DSB frequency-correction field by
 comparing observed differential-symbol frequencies against the expected
 `-6.75 kHz / +2.25 kHz / -6.75 kHz` pattern.
@@ -155,37 +157,40 @@ For `tetra_dmo_20240413_430050000_baseband.wav`:
 ```text
 input sample rate:     50000 Hz
 processing sample rate: 72000 Hz
-active window:         5.177 s - 5.458 s
-long debug window:     5.177 s - 5.738 s
-coarse offset:         +187.9 Hz
-residual correction:   +200.0 Hz
+active window:         5.177 s - 7.638 s
+long debug span:       2.461 s
+coarse offset:         +320.8 Hz
+residual correction:   +100.0 Hz
 best timing phase:     0.75 samples
-timing median error:   0.0345 rad
-recovered symbols:     10098 in long debug window
-recovered bits:        20194 in long debug window
+timing median error:   0.0554 rad
+recovered symbols:     44298 in long debug window
+recovered bits:        88594 in long debug window
 decision variant:      standard
 training candidates:   5
-good hits:             4
-local training hits:   98
-DMO candidates:        59 complete
-confirmed DMO bursts:  23
-confirmed DSB:         17
-confirmed DNB:         6
-payload blocks:        46
-SCH/S decoded:         17
-timing assigned:       23
-frequency correction:  17 DSB fields, median abs error 58.5 Hz
+good hits:             5
+DMO candidates:        434
+complete candidates:   430
+confirmed DMO bursts:  62
+confirmed DSB:         38
+confirmed DNB:         24
+payload blocks:        124
+SCH/S decoded:         38
+timing assigned:       62
+frequency correction:  38 DSB fields, median abs error 59.1 Hz
 ```
 
 Decoded SCH/S timing in the default DMO sample:
 
 ```text
-DSB run:    FN6 TN1 through FN9 TN4
-following:  DNB normal_1 at FN10 TN1, FN11 TN1, FN12 TN1
-then:       DSB at FN12 TN3, DNB normal_2 at FN13 TN1
-then:       DNB normal_1 at FN14 TN1 and FN15 TN1
+first DSB run:   FN6 TN1 through FN9 TN4
+following DNBs:  normal_1 at FN10 TN1, FN11 TN1, FN12 TN1
+then:            DSB at FN12 TN3, DNB normal_2 at FN13 TN1
+then:            DNB normal_1 at FN14 TN1 through FN17 TN1
+FN18 area:       DSB at FN18 TN1 and FN18 TN3, then DNB across FN1/FN2/FN3/FN4
+next DSB run:    FN15 TN1 through FN18 TN4
+later DNBs:      normal_1/normal_2 continue after the second DSB run
 SCH/S PDU: DMAC-SYNC, direct MS-MS, channel A normal mode, DM-1 no AI encryption
-SCH/S checks: blockErr=0, tailErr=0, RCPC metric=0 for all 17 decoded DSBs
+SCH/S checks: blockErr=0, tailErr=0, RCPC metric=0 for all 38 decoded DSBs
 ```
 
 Training-sequence observations:
@@ -243,3 +248,9 @@ Next technical step:
    family with their 216/432-bit layouts.
 3. Extend active-window processing to scan multiple active segments or a longer
    continuous interval once timing assignment is stable.
+
+Detailed current workflow documentation:
+
+```text
+docs/tetra/current_decode_workflow.md
+```

@@ -208,16 +208,28 @@ end
 
 function plotActiveWindow(info, figOptions)
 fig = newFig('02 Active Window', figOptions);
-plot(info.windowTimesSec, info.windowPowerDb, 'Color', [0.15 0.40 0.70]);
-hold on;
-yline(info.thresholdDb, '--', 'Threshold', 'Color', [0.80 0.20 0.10]);
-xline(info.startSec, '--', 'Start', 'Color', [0.10 0.55 0.20]);
-xline(info.endSec, '--', 'End', 'Color', [0.10 0.55 0.20]);
-grid on;
-title(sprintf('Active window: %s, active ratio %.3f', info.mode, info.activeRatio));
-xlabel('Time (s)');
-ylabel('1 ms power (dB)');
+tl = tiledlayout(fig, 2, 1, 'TileSpacing', 'compact', 'Padding', 'compact');
+ax1 = nexttile(tl);
+plotActiveWindowAxes(ax1, info);
+title(ax1, sprintf('Active window: %s, active ratio %.3f', info.mode, info.activeRatio));
+ax2 = nexttile(tl);
+plotActiveWindowAxes(ax2, info);
+span = max(info.endSec - info.startSec, 0);
+pad = max(0.050, 0.15 * span);
+xlim(ax2, [max(0, info.startSec - pad), info.endSec + pad]);
+title(ax2, sprintf('Active window zoom, %.3f s span', span));
 finishFig(fig, figOptions, '02_active_window.png');
+end
+
+function plotActiveWindowAxes(ax, info)
+plot(ax, info.windowTimesSec, info.windowPowerDb, 'Color', [0.15 0.40 0.70]);
+hold(ax, 'on');
+yline(ax, info.thresholdDb, '--', 'Threshold', 'Color', [0.80 0.20 0.10]);
+xline(ax, info.startSec, '--', 'Start', 'Color', [0.10 0.55 0.20]);
+xline(ax, info.endSec, '--', 'End', 'Color', [0.10 0.55 0.20]);
+grid(ax, 'on');
+xlabel(ax, 'Time (s)');
+ylabel(ax, '1 ms power (dB)');
 end
 
 function plotFrequencyStages(activeIq, corrected1, corrected2, fs, coarseInfo, coarseFoHz, figOptions, cfg)
@@ -424,24 +436,53 @@ if isempty(rows)
     return;
 end
 
-hold on;
+tl = tiledlayout(fig, 2, 1, 'TileSpacing', 'compact', 'Padding', 'compact');
+ax1 = nexttile(tl);
+plotBurstOverview(ax1, rows, slotReport);
+ax2 = nexttile(tl);
+plotBurstDetail(ax2, rows, slotReport);
+finishFig(fig, figOptions, '11_slot_candidates.png');
+end
+
+function plotBurstOverview(ax, rows, slotReport)
+hold(ax, 'on');
+for k = 1:numel(rows)
+    c = rows(k);
+    y = burstLane(c);
+    color = burstColor(c);
+    line(ax, [c.slotStartBit c.slotEndBit], [y y], ...
+        'LineWidth', 7, 'Color', color);
+    plot(ax, c.trainingStartBit, y, 'o', ...
+        'MarkerFaceColor', [0.85 0.25 0.10], ...
+        'MarkerEdgeColor', 'none', ...
+        'MarkerSize', 4);
+end
+grid(ax, 'on');
+ylim(ax, [0.5 4.5]);
+yticks(ax, 1:4);
+yticklabels(ax, {'DNB normal_2', 'DNB normal_1', 'DNB other', 'DSB sync'});
+xMin = min([rows.slotStartBit]);
+xMax = max([rows.slotEndBit]);
+pad = max(50, round(0.03 * max(xMax - xMin, 1)));
+xlim(ax, [xMin - pad, xMax + pad]);
+title(ax, sprintf('Confirmed DMO burst overview (%d confirmed, DSB=%d, DNB=%d)', ...
+    slotReport.confirmedCount, slotReport.dsbCount, slotReport.dnbCount));
+xlabel(ax, 'Recovered bit index');
+ylabel(ax, 'Burst class');
+end
+
+function plotBurstDetail(ax, rows, slotReport)
+hold(ax, 'on');
 n = min(numel(rows), 28);
 for k = 1:n
     c = rows(k);
     y = n - k + 1;
-    baseColor = [0.55 0.55 0.55];
-    if strcmp(c.burstType, 'DSB')
-        baseColor = [0.10 0.35 0.65];
-    elseif strcmp(c.burstType, 'DNB') && strcmp(c.trainingName, 'normal_1')
-        baseColor = [0.10 0.50 0.25];
-    elseif strcmp(c.burstType, 'DNB') && strcmp(c.trainingName, 'normal_2')
-        baseColor = [0.80 0.35 0.10];
-    end
-    line([c.slotStartBit c.slotEndBit], [y y], ...
+    baseColor = burstColor(c);
+    line(ax, [c.slotStartBit c.slotEndBit], [y y], ...
         'LineWidth', 5, 'Color', [0.78 0.78 0.78]);
-    drawPayloadLine(c, y, c.bkn1StartBit, c.bkn1EndBit, baseColor);
-    drawPayloadLine(c, y, c.bkn2StartBit, c.bkn2EndBit, baseColor .* 0.75);
-    plot(c.trainingStartBit, y, 'o', ...
+    drawPayloadLine(ax, c, y, c.bkn1StartBit, c.bkn1EndBit, baseColor);
+    drawPayloadLine(ax, c, y, c.bkn2StartBit, c.bkn2EndBit, baseColor .* 0.75);
+    plot(ax, c.trainingStartBit, y, 'o', ...
         'MarkerFaceColor', [0.85 0.25 0.10], ...
         'MarkerEdgeColor', 'none', ...
         'MarkerSize', 6);
@@ -452,33 +493,55 @@ for k = 1:n
     label = sprintf('%s %s%s start=%d err=%d/%d', ...
         c.burstType, c.trainingName, timingText, c.slotStartBit, ...
         c.totalErrors, c.totalCheckedBits);
-    text(c.slotEndBit + 15, y, label, ...
+    text(ax, c.slotEndBit + 15, y, label, ...
         'VerticalAlignment', 'middle', ...
         'FontSize', 9, ...
         'Interpreter', 'none');
 end
-grid on;
-ylim([0 n + 1]);
+grid(ax, 'on');
+ylim(ax, [0 n + 1]);
 xMin = min([rows(1:n).slotStartBit]);
 xMax = max([rows(1:n).slotEndBit]);
 pad = max(50, round(0.05 * max(xMax - xMin, 1)));
-xlim([xMin - pad, xMax + 10 * pad]);
-yticks(1:n);
-yticklabels(flip(arrayfun(@(x) sprintf('#%02d', x), 1:n, 'UniformOutput', false)));
-title(sprintf('Confirmed DMO bursts and extracted payload blocks (%d shown / %d confirmed)', ...
+xlim(ax, [xMin - pad, xMax + 10 * pad]);
+yticks(ax, 1:n);
+yticklabels(ax, flip(arrayfun(@(x) sprintf('#%02d', x), 1:n, 'UniformOutput', false)));
+title(ax, sprintf('Detailed BKN blocks, first %d confirmed bursts (%d total)', ...
     n, slotReport.confirmedCount));
-xlabel('Recovered bit index');
-ylabel('Burst rank');
-finishFig(fig, figOptions, '11_slot_candidates.png');
+xlabel(ax, 'Recovered bit index');
+ylabel(ax, 'Burst rank');
 end
 
-function drawPayloadLine(c, y, startInSlot, endInSlot, color)
+function y = burstLane(c)
+if strcmp(c.burstType, 'DSB')
+    y = 4;
+elseif strcmp(c.burstType, 'DNB') && strcmp(c.trainingName, 'normal_2')
+    y = 1;
+elseif strcmp(c.burstType, 'DNB') && strcmp(c.trainingName, 'normal_1')
+    y = 2;
+else
+    y = 3;
+end
+end
+
+function color = burstColor(c)
+color = [0.55 0.55 0.55];
+if strcmp(c.burstType, 'DSB')
+    color = [0.10 0.35 0.65];
+elseif strcmp(c.burstType, 'DNB') && strcmp(c.trainingName, 'normal_1')
+    color = [0.10 0.50 0.25];
+elseif strcmp(c.burstType, 'DNB') && strcmp(c.trainingName, 'normal_2')
+    color = [0.80 0.35 0.10];
+end
+end
+
+function drawPayloadLine(ax, c, y, startInSlot, endInSlot, color)
 if startInSlot <= 0 || endInSlot < startInSlot
     return;
 end
 x1 = c.slotStartBit + startInSlot - 1;
 x2 = c.slotStartBit + endInSlot - 1;
-line([x1 x2], [y y], 'LineWidth', 9, 'Color', color);
+line(ax, [x1 x2], [y y], 'LineWidth', 9, 'Color', color);
 end
 
 function report = makeFrequencyCorrectionReport(decision, slotReport, cfg)
@@ -600,8 +663,9 @@ grid(ax2, 'on');
 title(ax2, 'Observed frequency-correction pattern across confirmed DSBs');
 xlabel(ax2, 'Field symbol index');
 ylabel(ax2, 'DSB');
-yticks(ax2, 1:numel(validRows));
-yticklabels(ax2, report.burstLabels(validRows));
+tickRows = thinnedTicks(numel(validRows), 18);
+yticks(ax2, tickRows);
+yticklabels(ax2, report.burstLabels(validRows(tickRows)));
 
 ax3 = nexttile(tl);
 bar(ax3, report.medianAbsErrorHzByBurst(validRows), ...
@@ -611,10 +675,22 @@ title(ax3, sprintf('Frequency-correction median abs error, overall %.1f Hz', ...
     report.overallMedianAbsErrorHz));
 xlabel(ax3, 'DSB');
 ylabel(ax3, 'Median abs error (Hz)');
-xticks(ax3, 1:numel(validRows));
-xticklabels(ax3, report.burstLabels(validRows));
+xticks(ax3, tickRows);
+xticklabels(ax3, report.burstLabels(validRows(tickRows)));
 xtickangle(ax3, 20);
 finishFig(fig, figOptions, '12_frequency_correction_check.png');
+end
+
+function ticks = thinnedTicks(n, maxTicks)
+if n <= maxTicks
+    ticks = 1:n;
+    return;
+end
+step = ceil(n / maxTicks);
+ticks = 1:step:n;
+if ticks(end) ~= n
+    ticks = [ticks n];
+end
 end
 
 function p = movingPowerDb(x, win)

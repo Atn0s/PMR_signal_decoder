@@ -27,7 +27,7 @@ cfg.residualCorrectionMaxHz = 2500.0;
 cfg.trainingMaxErrorFraction = 0.25;
 cfg.trainingGoodErrorFraction = 0.18;
 cfg.trainingHitMinSpacingBits = 32;
-cfg.trainingMaxHitsPerSequence = 20;
+cfg.trainingMaxHitsPerSequence = 200;
 cfg.slotCandidateMaxCount = 60;
 cfg.slotCandidateMaxPerTraining = 12;
 cfg.dmoPreambleMaxErrors = 2;
@@ -35,7 +35,7 @@ cfg.dmoTrainingMaxErrorFraction = 0.18;
 cfg.dmoFrequencyMaxErrorFraction = 0.10;
 cfg.dmoTailMaxErrors = 1;
 cfg.dmoTotalMaxErrorFraction = 0.18;
-cfg.dmoBurstCandidateMaxCount = 80;
+cfg.dmoBurstCandidateMaxCount = 600;
 cfg.schSBlockCodeMaxErrors = 0;
 cfg.schSTailMaxErrors = 0;
 end
