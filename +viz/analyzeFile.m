@@ -10,6 +10,7 @@ p.addParameter('PipelineBackend', 'matlab');
 p.addParameter('DecoderBackend', 'matlab');
 p.addParameter('PythonRoot', '');
 p.addParameter('PythonExecutable', '');
+p.addParameter('Deduplicate', true);
 p.addParameter('CreateFigure', true);
 p.parse(varargin{:});
 
@@ -46,7 +47,8 @@ pdus = radio.scanFile(path, ...
     'PipelineBackend', p.Results.PipelineBackend, ...
     'DecoderBackend', p.Results.DecoderBackend, ...
     'PythonRoot', p.Results.PythonRoot, ...
-    'PythonExecutable', p.Results.PythonExecutable);
+    'PythonExecutable', p.Results.PythonExecutable, ...
+    'Deduplicate', p.Results.Deduplicate);
 
 result = struct();
 result.path = char(path);

@@ -198,8 +198,9 @@ bottom: 当前处理窗口附近的放大图，用来观察同步段、间隙和
 ```
 
 这一步只是在做离线图像调试的局部截取。当前已经新增
-`tetra.scanFileWindows` 做全文件多窗口扫描；后续如果要做实时接收，再把它升级
-成流式状态机，而不是只处理一个 active window。
+`tetra.scanFileWindows` 做全文件多窗口扫描。后续如果要做实时接收，计划采用
+“采集约 1 s 信号后批处理”的方式，再统一实现跨批次 DMO context，而不是做逐
+sample 的流式状态机。
 
 ### 3. 粗频偏和残余频偏
 
@@ -731,10 +732,15 @@ raw_bits
 
 ```text
 1. TCH/语音业务信道解码。
-2. 连续文件级或流式多 active-window 状态跟踪。
+2. 实时批处理阶段的跨批次 DMO context。
 3. 更完整的 L3/SDS/DM-SDU 业务载荷解析。
 4. soft-decision Viterbi 和更严格的 FCS/CRC 支持。
 ```
+
+实时处理决策：后续实时模式也按批处理推进，例如每次采集约 1 s IQ 后调用一次
+批处理解码。届时需要在批次之间保存最近 FN/TN、DCC、source/destination、MNI、
+当前 session 和事件去重键。该机制等进入实时处理阶段时统一实现，当前离线文件
+解码阶段暂不考虑。
 
 ## Burst-aware 差分判决改进计划
 

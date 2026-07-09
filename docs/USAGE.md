@@ -21,6 +21,7 @@ PROTOCOLS = {'dmr'};      % scanner.m only; use {'tetra'} for TETRA DMO
 SAMPLE_RATE = [];         % infer from filename, or set 48000 / 78125 / etc.
 BLIND_SEARCH = false;     % true for unknown wideband offsets
 SHOW_FIGURE = true;
+DEDUPLICATE = true;       % false keeps duplicate decoded frames for debugging
 ```
 
 Then click Run. The scripts print decoded PDU lines in the Command Window and
@@ -41,6 +42,9 @@ or pass `PythonExecutable` in programmatic calls.
 ```matlab
 pdus = radio.scanFile('/path/to/signal.rawiq', 'ProtocolNames', {'dmr'});
 pdus = radio.scanFile('/path/to/tetra.wav', 'ProtocolNames', {'tetra'});
+rawPdus = radio.scanFile('/path/to/signal.rawiq', ...
+    'ProtocolNames', {'dpmr'}, ...
+    'Deduplicate', false);
 
 result = tetra.scanFileWindows('/path/to/tetra.wav', ...
     'OutputDir', 'outputs/tetra_full_file_scan/manual');
@@ -53,8 +57,24 @@ result = viz.analyzeFile('/path/to/signal.rawiq', ...
 `tetra.scanFileWindows` is a TETRA-only experiment entry point and is not wired
 through `scanner.m` yet.
 
+## JSON Output
+
+`radio.writeJson` matches the Python default and omits `raw_bits` unless
+explicitly requested:
+
+```matlab
+radio.writeJson(pdus, 'outputs/result.json');
+radio.writeJson(pdus, 'outputs/result_with_bits.json', 'IncludeRawBits', true);
+```
+
 ## Command-Line Smoke Test
 
 ```bash
 /home/lzkj/matlab/bin/matlab -batch "cd('/home/lzkj/lzkj_workspace/matlab_docs'); startup; tests.runAll"
+```
+
+Run the smoke tests plus Python golden-vector comparison:
+
+```bash
+/home/lzkj/matlab/bin/matlab -batch "cd('/home/lzkj/lzkj_workspace/matlab_docs'); startup; runGoldenRegression"
 ```

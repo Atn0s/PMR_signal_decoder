@@ -13,7 +13,22 @@ cfg.syncThreshold = 0.82;
 cfg.syncMaxSymbolErrors = 0;
 cfg.syncMinDistanceSamples = 1200;
 cfg.syncDedupWindowSymbols = 3;
+cfg.syncErrorPhaseMin = -12.0;
+cfg.syncErrorPhaseMax = 12.0;
+cfg.syncErrorPhaseSteps = 13;
+cfg.spsSearchMin = 20.0;
+cfg.spsSearchMax = 20.0;
+cfg.spsSearchSteps = 1;
+cfg.phaseSearchMin = -12.0;
+cfg.phaseSearchMax = 12.0;
+cfg.phaseSearchSteps = 25;
+cfg.sampleWindows = 0;
+cfg.decisionAmbiguousThreshold = 0.35;
+cfg.frameSymbols = 384;
+cfg.headerSyncCandidateLimit = 50;
+cfg.headerSymbolCandidateLimit = 16;
+cfg.voiceSyncCandidateLimit = 100;
+cfg.voiceSymbolCandidateLimit = 8;
 cfg.dedupFrameBucketSamples = 3840;
 cfg.stableColorMinRepeats = 2;
 end
-

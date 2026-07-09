@@ -4,6 +4,7 @@ p = inputParser;
 p.addParameter('DecoderBackend', 'matlab');
 p.addParameter('PythonRoot', '');
 p.addParameter('PythonExecutable', '');
+p.addParameter('Deduplicate', true);
 p.parse(varargin{:});
 
 backend = lower(char(p.Results.DecoderBackend));
@@ -13,7 +14,8 @@ switch backend
             'SampleRate', sampleRate, ...
             'ProtocolNames', enabledProtocols, ...
             'PythonRoot', p.Results.PythonRoot, ...
-            'PythonExecutable', p.Results.PythonExecutable);
+            'PythonExecutable', p.Results.PythonExecutable, ...
+            'Deduplicate', p.Results.Deduplicate);
     case {'matlab', 'native'}
         pdus = radio.decodeIqEnabled(iqDec, enabledProtocols, sampleRate);
     otherwise

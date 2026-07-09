@@ -1,10 +1,10 @@
 %% Unified DMR/P25/dPMR/TETRA scanner entry
 % Edit the configuration block, then click Run in MATLAB.
 
-TARGET_FILE = '/home/lzkj/lzkj_workspace/python_docs/DMR_demo/data/dmr_1_78125.rawiq';
+TARGET_FILE = '/home/lzkj/lzkj_workspace/python_docs/DMR_demo/data/synthesized_wideband_2.5MHz.rawiq';
 
 % Use {} to try all enabled protocols, or one/more of: {'dmr'}, {'p25'}, {'dpmr'}, {'tetra'}.
-PROTOCOLS = {'dmr'};
+PROTOCOLS = {};
 
 % Leave SAMPLE_RATE empty to infer it from names like dmr_1_78125.rawiq.
 SAMPLE_RATE = [];
@@ -13,10 +13,13 @@ SAMPLE_RATE = [];
 FREQ_LIST = [];
 
 % Set true for wideband/multi-channel IQ when the signal offset is unknown.
-BLIND_SEARCH = false;
+BLIND_SEARCH = true;
 
 % Show diagnostic figure with IQ, PSD, frontend output, and decoded PDU text.
 SHOW_FIGURE = true;
+
+% Set false to keep repeated frames for debugging and golden comparison.
+DEDUPLICATE = true;
 
 % Use the native MATLAB backend. Set either value to 'python' for fallback.
 PIPELINE_BACKEND = 'matlab';     % 'matlab' or 'python'
@@ -36,6 +39,7 @@ result = viz.analyzeFile(TARGET_FILE, ...
     'BlindSearch', BLIND_SEARCH, ...
     'PipelineBackend', PIPELINE_BACKEND, ...
     'DecoderBackend', DECODER_BACKEND, ...
+    'Deduplicate', DEDUPLICATE, ...
     'CreateFigure', SHOW_FIGURE);
 
 pdus = result.pdus;

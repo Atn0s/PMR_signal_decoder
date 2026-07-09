@@ -16,20 +16,10 @@ SAMPLES = (
 )
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Build golden decoder vectors.")
-    parser.add_argument("--project-root", default="/home/lzkj/lzkj_workspace/python_docs/DMR_demo")
-    parser.add_argument("--out-dir", default="golden/current")
-    args = parser.parse_args(argv)
-
-    root = os.path.abspath(args.project_root)
-    out_dir = os.path.abspath(args.out_dir)
-    os.makedirs(out_dir, exist_ok=True)
-    sys.path.insert(0, root)
-    os.chdir(root)
-
+def build_vectors(root: str, out_dir: str, deduplicate: bool) -> None:
     import scanner  # pylint: disable=import-error,import-outside-toplevel
 
+    os.makedirs(out_dir, exist_ok=True)
     for name, rel_path, protocols, sample_rate, blind in SAMPLES:
         target = os.path.join(root, rel_path)
         if not os.path.exists(target):
@@ -43,10 +33,31 @@ def main(argv: list[str] | None = None) -> int:
             protocol_names=list(protocols),
             sample_rate=sample_rate,
             blind_search=blind,
+            deduplicate=deduplicate,
         )
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Build golden decoder vectors.")
+    parser.add_argument("--project-root", default="/home/lzkj/lzkj_workspace/python_docs/DMR_demo")
+    parser.add_argument("--out-dir", default="golden/current")
+    parser.add_argument("--raw-out-dir", default=None,
+                        help="optional no-dedup baseline output directory")
+    parser.add_argument("--no-dedup", dest="deduplicate", action="store_false",
+                        help="write the main out-dir without Python deduplication")
+    parser.set_defaults(deduplicate=True)
+    args = parser.parse_args(argv)
+
+    root = os.path.abspath(args.project_root)
+    out_dir = os.path.abspath(args.out_dir)
+    sys.path.insert(0, root)
+    os.chdir(root)
+
+    build_vectors(root, out_dir, args.deduplicate)
+    if args.raw_out_dir:
+        build_vectors(root, os.path.abspath(args.raw_out_dir), False)
     return 0
 
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

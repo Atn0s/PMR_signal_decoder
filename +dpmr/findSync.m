@@ -24,9 +24,6 @@ want = string(p.Results.SyncTypes);
 raw = struct([]);
 for r = 1:size(refs, 1)
     syncType = refs{r, 1};
-    if ~any(want == syncType)
-        continue;
-    end
     inverted = refs{r, 2};
     ref = refs{r, 3};
     ncc = zeroMeanNcc(y(:), ref);
@@ -63,7 +60,16 @@ for k = 1:numel(raw)
         deduped = appendStruct(deduped, cand);
     end
 end
-candidates = rmfield(deduped, {'errors', 'resid'});
+candidates = filterSyncTypes(rmfield(deduped, {'errors', 'resid'}), want);
+end
+
+function candidates = filterSyncTypes(items, want)
+candidates = struct([]);
+for k = 1:numel(items)
+    if any(want == string(items(k).sync_type))
+        candidates = appendStruct(candidates, items(k));
+    end
+end
 end
 
 function ncc = zeroMeanNcc(y, refDibits)
@@ -133,4 +139,3 @@ end
 function out = appendStruct(arr, item)
 if isempty(arr), out = item; else, out = arr; out(end + 1) = item; end
 end
-

@@ -5,6 +5,7 @@ p.addParameter('RadioConfig', radio.defaultConfig());
 p.addParameter('DecoderBackend', 'matlab');
 p.addParameter('PythonRoot', '');
 p.addParameter('PythonExecutable', '');
+p.addParameter('Deduplicate', true);
 p.parse(varargin{:});
 cfg = p.Results.RadioConfig;
 
@@ -20,6 +21,7 @@ end
 pdus = radio.decodeNarrowband(iqDec, enabledProtocols, targetFs, ...
     'DecoderBackend', p.Results.DecoderBackend, ...
     'PythonRoot', p.Results.PythonRoot, ...
-    'PythonExecutable', p.Results.PythonExecutable);
+    'PythonExecutable', p.Results.PythonExecutable, ...
+    'Deduplicate', p.Results.Deduplicate);
 pdus = radio.addMeta(pdus, '_fo_hz', fo);
 end

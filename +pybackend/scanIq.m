@@ -5,6 +5,7 @@ p.addParameter('SampleRate', 48000.0);
 p.addParameter('ProtocolNames', {});
 p.addParameter('PythonRoot', '');
 p.addParameter('PythonExecutable', '');
+p.addParameter('Deduplicate', true);
 p.parse(varargin{:});
 
 iq = iq(:);
@@ -29,7 +30,8 @@ pdus = pybackend.scanFile(tmpPath, ...
     'ProtocolNames', p.Results.ProtocolNames, ...
     'IqDType', 'float32', ...
     'PythonRoot', p.Results.PythonRoot, ...
-    'PythonExecutable', p.Results.PythonExecutable);
+    'PythonExecutable', p.Results.PythonExecutable, ...
+    'Deduplicate', p.Results.Deduplicate);
 end
 
 function deleteIfExists(path)
@@ -37,4 +39,3 @@ if exist(path, 'file') == 2
     delete(path);
 end
 end
-

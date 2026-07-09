@@ -8,6 +8,7 @@ p.addParameter('RadioConfig', radio.defaultConfig());
 p.addParameter('DecoderBackend', 'matlab');
 p.addParameter('PythonRoot', '');
 p.addParameter('PythonExecutable', '');
+p.addParameter('Deduplicate', true);
 p.parse(varargin{:});
 
 if isempty(sampleRate)
@@ -25,7 +26,8 @@ if ~isempty(freqList)
             'RadioConfig', cfg, ...
             'DecoderBackend', p.Results.DecoderBackend, ...
             'PythonRoot', p.Results.PythonRoot, ...
-            'PythonExecutable', p.Results.PythonExecutable);
+            'PythonExecutable', p.Results.PythonExecutable, ...
+            'Deduplicate', p.Results.Deduplicate);
         pdus = appendStructArray(pdus, next);
     end
 elseif p.Results.BlindSearch
@@ -35,7 +37,8 @@ elseif p.Results.BlindSearch
             'RadioConfig', cfg, ...
             'DecoderBackend', p.Results.DecoderBackend, ...
             'PythonRoot', p.Results.PythonRoot, ...
-            'PythonExecutable', p.Results.PythonExecutable);
+            'PythonExecutable', p.Results.PythonExecutable, ...
+            'Deduplicate', p.Results.Deduplicate);
         pdus = appendStructArray(pdus, next);
     end
 else
@@ -43,11 +46,14 @@ else
         'RadioConfig', cfg, ...
         'DecoderBackend', p.Results.DecoderBackend, ...
         'PythonRoot', p.Results.PythonRoot, ...
-        'PythonExecutable', p.Results.PythonExecutable);
+        'PythonExecutable', p.Results.PythonExecutable, ...
+        'Deduplicate', p.Results.Deduplicate);
 end
 
 pdus = radio.postprocessPdus(pdus, enabled);
-pdus = radio.deduplicatePdus(pdus);
+if p.Results.Deduplicate
+    pdus = radio.deduplicatePdus(pdus);
+end
 end
 
 function out = appendStructArray(a, b)

@@ -8,6 +8,7 @@ p.addParameter('SampleRate', []);
 p.addParameter('IqDType', 'int16');
 p.addParameter('PythonRoot', '');
 p.addParameter('PythonExecutable', '');
+p.addParameter('Deduplicate', true);
 p.parse(varargin{:});
 
 root = char(p.Results.PythonRoot);
@@ -27,6 +28,9 @@ cleanupJson = onCleanup(@() deleteIfExists(jsonPath));
 
 args = {pyexe, helper, '--project-root', root, '--target', char(path), ...
     '--json', jsonPath, '--iq-dtype', char(p.Results.IqDType)};
+if ~p.Results.Deduplicate
+    args = [args, {'--no-dedup'}]; %#ok<AGROW>
+end
 
 if ~isempty(p.Results.SampleRate)
     args = [args, {'--sample-rate', num2str(double(p.Results.SampleRate), '%.17g')}]; %#ok<AGROW>
@@ -81,4 +85,3 @@ if exist(path, 'file') == 2
     delete(path);
 end
 end
-

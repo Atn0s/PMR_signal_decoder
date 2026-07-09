@@ -1,0 +1,4808 @@
+[
+  {
+    "protocol": "DMR",
+    "type": "LC_HEADER",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "sync_type": "DATA_MS",
+      "color_code": 0,
+      "data_type": 1,
+      "data_type_name": "VOICE_LC_HEADER",
+      "slot_type_bits": "00000001100011101011",
+      "slot_type_hex": "018eb0",
+      "fec": {
+        "golay_ok": true,
+        "bptc_196_96_ok": true,
+        "rs_12_9_4_ok": true
+      },
+      "info196_hex": "008500ce029012200af050000940168005007e0140115801d0",
+      "decoded96_hex": "000000000001000001902dad",
+      "lc_payload_hex": "000000000001000001",
+      "rs_parity_hex": "902dad",
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 9448877,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 332292,
+      "sync_center_sample": 332292
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LC_HEADER",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "sync_type": "DATA_MS",
+      "color_code": 0,
+      "data_type": 1,
+      "data_type_name": "VOICE_LC_HEADER",
+      "slot_type_bits": "00000001100011101011",
+      "slot_type_hex": "018eb0",
+      "fec": {
+        "golay_ok": true,
+        "bptc_196_96_ok": true,
+        "rs_12_9_4_ok": true
+      },
+      "info196_hex": "008500ce029012200af050000940168005007e0140115801d0",
+      "decoded96_hex": "000000000001000001902dad",
+      "lc_payload_hex": "000000000001000001",
+      "rs_parity_hex": "902dad",
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 9448877,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 335172,
+      "sync_center_sample": 335172
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 349572,
+      "sync_center_sample": 349572,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 366852,
+      "sync_center_sample": 366852,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 384132,
+      "sync_center_sample": 384132,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 401412,
+      "sync_center_sample": 401412,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 418692,
+      "sync_center_sample": 418692,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 435972,
+      "sync_center_sample": 435972,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 453252,
+      "sync_center_sample": 453252,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 470532,
+      "sync_center_sample": 470532,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 3
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 119,
+          "emb_parity_ok": false
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 487812,
+      "sync_center_sample": 487812,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 3
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 119,
+          "emb_parity_ok": false
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 505092,
+      "sync_center_sample": 505092,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 522372,
+      "sync_center_sample": 522372,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 539652,
+      "sync_center_sample": 539652,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 3
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 4,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": false
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 556932,
+      "sync_center_sample": 556932,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 574212,
+      "sync_center_sample": 574212,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 608772,
+      "sync_center_sample": 608772,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 3
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 5,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": false
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 626052,
+      "sync_center_sample": 626052,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 643332,
+      "sync_center_sample": 643332,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 3
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 4,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": false
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 660612,
+      "sync_center_sample": 660612,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 677892,
+      "sync_center_sample": 677892,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 695172,
+      "sync_center_sample": 695172,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 712452,
+      "sync_center_sample": 712452,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 729732,
+      "sync_center_sample": 729732,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 747012,
+      "sync_center_sample": 747012,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 764292,
+      "sync_center_sample": 764292,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 781572,
+      "sync_center_sample": 781572,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 798852,
+      "sync_center_sample": 798852,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 816132,
+      "sync_center_sample": 816132,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 833412,
+      "sync_center_sample": 833412,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 850692,
+      "sync_center_sample": 850692,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 867972,
+      "sync_center_sample": 867972,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 885252,
+      "sync_center_sample": 885252,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 902532,
+      "sync_center_sample": 902532,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 919812,
+      "sync_center_sample": 919812,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 937092,
+      "sync_center_sample": 937092,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 954372,
+      "sync_center_sample": 954372,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LC_HEADER",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "sync_type": "DATA_MS",
+      "color_code": 0,
+      "data_type": 1,
+      "data_type_name": "VOICE_LC_HEADER",
+      "slot_type_bits": "00000001100011101011",
+      "slot_type_hex": "018eb0",
+      "fec": {
+        "golay_ok": true,
+        "bptc_196_96_ok": true,
+        "rs_12_9_4_ok": true
+      },
+      "info196_hex": "008500ce029012200af050000940168005007e0140115801d0",
+      "decoded96_hex": "000000000001000001902dad",
+      "lc_payload_hex": "000000000001000001",
+      "rs_parity_hex": "902dad",
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 9448877,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 1026372,
+      "sync_center_sample": 1026372
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LC_HEADER",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "sync_type": "DATA_MS",
+      "color_code": 0,
+      "data_type": 1,
+      "data_type_name": "VOICE_LC_HEADER",
+      "slot_type_bits": "00000001100011101011",
+      "slot_type_hex": "018eb0",
+      "fec": {
+        "golay_ok": true,
+        "bptc_196_96_ok": true,
+        "rs_12_9_4_ok": true
+      },
+      "info196_hex": "008500ce029012200af050000940168005007e0140115801d0",
+      "decoded96_hex": "000000000001000001902dad",
+      "lc_payload_hex": "000000000001000001",
+      "rs_parity_hex": "902dad",
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 9448877,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 1029252,
+      "sync_center_sample": 1029252
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 1043652,
+      "sync_center_sample": 1043652,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 1060932,
+      "sync_center_sample": 1060932,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 3
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 119,
+          "emb_parity_ok": false
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 1078212,
+      "sync_center_sample": 1078212,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 1095492,
+      "sync_center_sample": 1095492,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 1112772,
+      "sync_center_sample": 1112772,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 1130052,
+      "sync_center_sample": 1130052,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 1147332,
+      "sync_center_sample": 1147332,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 1164612,
+      "sync_center_sample": 1164612,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 1181892,
+      "sync_center_sample": 1181892,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 3
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 119,
+          "emb_parity_ok": false
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 1199172,
+      "sync_center_sample": 1199172,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 1216452,
+      "sync_center_sample": 1216452,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 1233732,
+      "sync_center_sample": 1233732,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 1251012,
+      "sync_center_sample": 1251012,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 1268292,
+      "sync_center_sample": 1268292,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 1285572,
+      "sync_center_sample": 1285572,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 1302852,
+      "sync_center_sample": 1302852,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LC_HEADER",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "sync_type": "DATA_MS",
+      "color_code": 0,
+      "data_type": 1,
+      "data_type_name": "VOICE_LC_HEADER",
+      "slot_type_bits": "00000001100011101011",
+      "slot_type_hex": "018eb0",
+      "fec": {
+        "golay_ok": true,
+        "bptc_196_96_ok": true,
+        "rs_12_9_4_ok": true
+      },
+      "info196_hex": "008500ce029012200af050000940168005007e0140115801d0",
+      "decoded96_hex": "000000000001000001902dad",
+      "lc_payload_hex": "000000000001000001",
+      "rs_parity_hex": "902dad",
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 9448877,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 1389252,
+      "sync_center_sample": 1389252
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LC_HEADER",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "sync_type": "DATA_MS",
+      "color_code": 0,
+      "data_type": 1,
+      "data_type_name": "VOICE_LC_HEADER",
+      "slot_type_bits": "00000001100011101011",
+      "slot_type_hex": "018eb0",
+      "fec": {
+        "golay_ok": true,
+        "bptc_196_96_ok": true,
+        "rs_12_9_4_ok": true
+      },
+      "info196_hex": "008500ce029012200af050000940168005007e0140115801d0",
+      "decoded96_hex": "000000000001000001902dad",
+      "lc_payload_hex": "000000000001000001",
+      "rs_parity_hex": "902dad",
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 9448877,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 1392132,
+      "sync_center_sample": 1392132
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 1406532,
+      "sync_center_sample": 1406532,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 1423812,
+      "sync_center_sample": 1423812,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 1441092,
+      "sync_center_sample": 1441092,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 1458372,
+      "sync_center_sample": 1458372,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "LATE_ENTRY",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 1475652,
+      "sync_center_sample": 1475652,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "DMR_CALL",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "call_type": "group",
+      "color_code": 0,
+      "start_sample": 332292,
+      "end_sample": 1475652,
+      "duration_s": 23.82,
+      "signalling_count": 62,
+      "late_entry_count": 56,
+      "csbk_count": 0,
+      "closed_by": "end_of_scan"
+    }
+  }
+]

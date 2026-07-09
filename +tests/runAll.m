@@ -6,6 +6,12 @@ addpath(root);
 assert(common.detectSampleRate('data/dmr_1_78125.rawiq') == 78125);
 assert(common.detectSampleRate('data/synthesized_wideband_2.5MHz.rawiq') == 2500000);
 assert(isequal(radio.normalizeProtocolNames({'dmr', 'P25', 'dpmr', 'tetra'}), {'DMR', 'P25', 'dPMR', 'TETRA'}));
+assert(numel(radio.deduplicatePdus(makeP25SemanticDuplicates())) == 1);
+assert(numel(radio.deduplicatePdus(makeDpmrSemanticDuplicates())) == 1);
+syntheticNid = false(64, 1);
+syntheticNid(1:16) = [intToBits(hex2dec('293'), 12), intToBits(5, 4)];
+synthetic = p25.decodeNid(syntheticNid);
+assert(~synthetic.valid_bch && ~synthetic.corrected);
 
 cfg = tetra.config();
 seqs = tetra.trainingSequences();
@@ -46,7 +52,17 @@ sample = fullfile(pybackend.defaultPythonRoot(), 'data', 'dmr_1_78125.rawiq');
 if exist(sample, 'file') == 2
     pdus = radio.scanFile(sample, 'ProtocolNames', {'dmr'}, ...
         'PipelineBackend', 'matlab', 'DecoderBackend', 'matlab');
+    rawPdus = radio.scanFile(sample, 'ProtocolNames', {'dmr'}, ...
+        'PipelineBackend', 'matlab', 'DecoderBackend', 'matlab', ...
+        'Deduplicate', false);
     assert(isstruct(pdus));
+    assert(numel(rawPdus) >= numel(pdus));
+    tmpJson = [tempname, '.json'];
+    radio.writeJson(pdus, tmpJson);
+    assert(~contains(fileread(tmpJson), 'raw_bits'));
+    radio.writeJson(pdus, tmpJson, 'IncludeRawBits', true);
+    assert(contains(fileread(tmpJson), 'raw_bits'));
+    delete(tmpJson);
     fprintf('DMR sample decoded PDUs: %d\n', numel(pdus));
 end
 
@@ -147,4 +163,26 @@ bits = false(1, width);
 for k = 1:width
     bits(k) = bitget(uint32(value), width - k + 1) ~= 0;
 end
+end
+
+function pdus = makeP25SemanticDuplicates()
+extra = struct('nac', 659, 'fs_start', 1000, 'lco', 0, 'mfid', 0, ...
+    'call_type', 'group', 'lc_info', 1024, 'tgid', 1);
+pdus(1) = makePdu('P25', 'P25_LDU1', 1, 1, 0, 'LDU1', '', extra);
+extra.fs_start = 250000;
+pdus(2) = makePdu('P25', 'P25_LDU1', 1, 1, 0, 'LDU1', '', extra);
+end
+
+function pdus = makeDpmrSemanticDuplicates()
+cch = struct('frame_number', 1, 'id_half', 1407, ...
+    'communication_mode', 0, 'comms_format', 1, 'emergency_priority', 0);
+extra = struct('color_code', 2, 'sync_type', 'FS2', 'fs_start', 1000, 'cch', cch);
+pdus(1) = makePdu('dPMR', 'DPMR_VOICE', '', '', 0, 'VOICE', '', extra);
+extra.fs_start = 250000;
+pdus(2) = makePdu('dPMR', 'DPMR_VOICE', '', '', 0, 'VOICE', '', extra);
+end
+
+function pdu = makePdu(protocol, typeName, src, dst, ts, flco, fid, extra)
+pdu = struct('protocol', protocol, 'type', typeName, 'src', src, 'dst', dst, ...
+    'ts', ts, 'flco', flco, 'fid', fid, 'extra', extra, 'raw_bits', []);
 end

@@ -20,8 +20,14 @@ IQ -> 72 kHz -> RRC -> timing -> pi/4-DQPSK hard bits
 3. 从 DMAC-SYNC 建立 DMO 上下文和 DCC。
 4. 解 DNB normal_2 的 STCH。
 5. 解 DNB normal_1 的 SCH/F 或 TCH。
-6. 建立 MAC PDU 输出和状态机。
+6. 建立 MAC PDU 输出。
 ```
+
+状态机决策：当前离线阶段只做事件输出和 session 重建，不继续实现完整 MAC
+状态机。后续进入实时处理时，系统也会采用“采集约 1 s 信号后批处理”的方式，
+因此应统一实现 batch-oriented DMO context，而不是逐 sample 的流式状态机。
+该批处理上下文用于在批次之间保存 FN/TN、DCC、source/destination、MNI、
+当前 session 和事件去重键。当前阶段暂不考虑。
 
 ## 关键原则
 
@@ -310,36 +316,51 @@ codec payload extraction
 3. 对未加密样本输出 codec payload 或 voice-frame candidate。
 ```
 
-## 阶段 8：MAC 状态机和输出
+## 阶段 8：实时批处理上下文和输出
 
-需要新增一个 DMO decode state：
+当前离线阶段已经输出 MAC PDU 和 session 摘要。完整跨批次上下文等进入实时
+处理阶段时统一做，形式不是逐 sample 流式状态机，而是：
 
-```text
-DmoContext
-DmoCall
-DmoBurst
-DmoLogicalChannelBlock
-DmoMacPdu
+```matlab
+[state, events] = tetra.processBatch(iq1s, fs, state)
 ```
 
-建议输出：
+`state` 至少需要保存：
 
 ```text
-outputs/tetra_symbol_debug/.../dmo_mac_preview.txt
-outputs/tetra_symbol_debug/.../dmo_context.json
+last frame/slot reference
+last valid DMAC-SYNC time
+current DCC
+sourceAddress
+destinationAddress
+MNI
+communication type
+air-interface encryption state
+current session
+recent emitted-event keys
 ```
 
-`dmo_mac_preview.txt` 应按时序列出：
+批处理输出仍沿用当前 PDU/event 结构：
 
 ```text
-FN/TN
-burst type
-logical channel
-decode ok/fail
-PDU type
-source/destination
-summary
+TETRA_DMAC_SYNC
+TETRA_STCH
+TETRA_SCHF
+TETRA_TCH_CANDIDATE
+TETRA_SESSION
 ```
+
+典型批处理逻辑：
+
+```text
+1. 当前批次先独立完成物理层和 burst 识别。
+2. 如果本批有 DSB，刷新 FN/TN、DCC 和 session 上下文。
+3. 如果本批没有 DSB，但 state 里有有效 DCC，则用上一批上下文解释 DNB/STCH。
+4. 输出本批新增事件，并用 recent emitted-event keys 去重。
+5. 返回更新后的 state，供下一批使用。
+```
+
+该阶段暂不在当前离线文件解码任务中实现。
 
 ## 推荐实现顺序
 
@@ -351,7 +372,9 @@ summary
 5. 建 DMO context 和 DCC。
 6. 解当前样本 normal_2 的 STCH。
 7. 尝试 normal_1 的 SCH/F，失败则标记为 TCH candidate。
-8. 最后进入 TCH/voice。
+8. 补全更多 MAC message element 解析。
+9. 进入实时批处理阶段时，再统一实现 batch-oriented DMO context。
+10. 如确有需求，最后进入 TCH/voice。
 ```
 
 ## 风险点

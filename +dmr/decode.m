@@ -5,6 +5,7 @@ if nargin < 2 || isempty(cfg)
 end
 positions = dmr.findSyncPositions(y, cfg);
 pdus = struct([]);
+session = dmr.sessionInit();
 seenKeys = strings(0, 1);
 for idx = 1:height(positions)
     center = positions.center(idx);
@@ -26,7 +27,10 @@ for idx = 1:height(positions)
             end
             [collector, pdu] = lateEntryFeed(collector, bits);
             if ~isempty(pdu)
+                pdu = stampPdu(pdu, round(center + cfg.voiceBurstStrideSamples * j), syncType);
                 pdus = appendStruct(pdus, pdu);
+                [session, callPdu] = dmr.sessionFeed(session, pdu, cfg.samplesPerSymbol);
+                pdus = appendStruct(pdus, callPdu);
                 break;
             end
         end
@@ -37,10 +41,15 @@ for idx = 1:height(positions)
         end
         pdu = dmr.decodeBurst(symbols, syncType);
         if ~isempty(pdu)
+            pdu = stampPdu(pdu, round(center), syncType);
             pdus = appendStruct(pdus, pdu);
+            [session, callPdu] = dmr.sessionFeed(session, pdu, cfg.samplesPerSymbol);
+            pdus = appendStruct(pdus, callPdu);
         end
     end
 end
+[session, callPdu] = dmr.sessionFinalize(session, cfg.samplesPerSymbol); %#ok<ASGLU>
+pdus = appendStruct(pdus, callPdu);
 pdus = radio.normalizePdus(pdus);
 end
 
@@ -110,5 +119,21 @@ end
 end
 
 function out = appendStruct(arr, item)
-if isempty(arr), out = item; else, out = arr; out(end + 1) = item; end
+if isempty(item)
+    out = arr;
+elseif isempty(arr)
+    out = item;
+else
+    out = arr;
+    out(end + 1) = item;
+end
+end
+
+function pdu = stampPdu(pdu, sample, syncType)
+if ~isfield(pdu, 'extra') || isempty(pdu.extra)
+    pdu.extra = struct();
+end
+pdu.extra.fs_start = sample;
+pdu.extra.sync_center_sample = sample;
+pdu.extra.sync_type = syncType;
 end

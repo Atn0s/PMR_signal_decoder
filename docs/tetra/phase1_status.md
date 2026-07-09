@@ -280,15 +280,23 @@ checks to confirm DSB/DNB slots, then performs DMO control-channel decoding:
 
 TCH/VOICE decoding is intentionally not implemented in this phase. TCH payload
 collection, speech/data channel decode, encryption handling, and codec payload
-extraction remain the next boundary.
+extraction remain outside the current data/control-only target.
 
-Next technical step:
+Current decision:
 
-1. Add a DMO call-state layer that groups DM-SETUP, DM-OCCUPIED, STCH, release,
-   and TCH candidates into one traffic session.
-2. Extend active-window processing to scan multiple active segments or a longer
-   continuous interval once timing assignment is stable.
-3. After the control path is stable, add TCH/VOICE payload collection and decode.
+1. The offline DMO control-plane decode path is treated as the first usable
+   closed loop: multi-window file scan, DSB/DNB confirmation, DMAC-SYNC, DCC,
+   STCH, TCH candidates, and session summaries are available.
+2. The future real-time path will also use batch processing, for example
+   collecting about 1 s of IQ before decoding. It will not require a strict
+   sample-streaming MAC state machine.
+3. When real-time processing starts, add a batch-oriented DMO context that
+   carries FN/TN, DCC, source/destination, MNI, current session, and event
+   deduplication keys across batches.
+4. That batch-state work is deferred until the real-time phase and is not part
+   of the current offline decode task.
+5. The remaining offline data/control work is to expand MAC message element
+   parsing as new samples or target services require it.
 
 Detailed current workflow documentation:
 

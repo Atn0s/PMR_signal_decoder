@@ -42,11 +42,36 @@ Implemented.
 
 ## Stage 5: Golden vector regression
 
-Implemented as tooling.
+Implemented as field-level regression.
 
 - `tools/build_golden_vectors.py`
 - `tools/buildGoldenVectors.m`
-- `tests.runAll`
+- `+tests/goldenRegression.m`
+- `examples/runGoldenRegression.m`
 
-Use Python-generated JSON baselines under `golden/current/` to compare future
-native MATLAB protocol ports against the current Python behavior.
+Use Python-generated JSON baselines under `golden/current/` to compare native
+MATLAB output against the current Python behavior. `golden/raw/` keeps optional
+no-dedup Python baselines for debugging duplicate frame recovery.
+
+## 2026-07-09 Incremental Sync
+
+Implemented from the Python `docs/MATLAB增量迁移方案.md` offline scope.
+
+- Added `Deduplicate` through `scanner.m`, protocol CLI scripts, `radio.scanFile`,
+  `radio.scanIq`, candidate/baseband decode paths, and the Python fallback bridge.
+- Aligned P25 and dPMR semantic dedup keys with Python behavior.
+- Added DMR and dPMR call summary PDUs: `DMR_CALL` and `dPMR_CALL`.
+- Aligned dPMR stable color filtering, including quality-aware filtering and
+  `stable_color_repeats`.
+- Added dPMR FS1 header decode path and Python-compatible global sync dedup.
+  The current golden dPMR sample has no valid FS1 header output, so this path is
+  implemented but still needs broader sample coverage.
+- Aligned MATLAB JSON output with Python default behavior by omitting `raw_bits`
+  unless `IncludeRawBits=true`.
+- Regenerated Python baselines and verified:
+  `tests.runAll` plus `tests.goldenRegression()` both pass.
+
+Still outside this migration slice:
+
+- Python `realtime/`, SDR source, channelizer, worker, and realtime aggregator.
+- Full okdmr-equivalent DMR FEC/CSBK/link-control coverage.

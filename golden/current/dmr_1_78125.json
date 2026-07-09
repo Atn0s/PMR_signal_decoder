@@ -8,7 +8,46 @@
     "flco": "GroupVoiceChannelUser",
     "fid": "StandardizedFID",
     "extra": {
-      "color_code": 0
+      "sync_type": "DATA_MS",
+      "color_code": 0,
+      "data_type": 1,
+      "data_type_name": "VOICE_LC_HEADER",
+      "slot_type_bits": "00000001100011101011",
+      "slot_type_hex": "018eb0",
+      "fec": {
+        "golay_ok": true,
+        "bptc_196_96_ok": true,
+        "rs_12_9_4_ok": true
+      },
+      "info196_hex": "008500ce029012200af050000940168005007e0140115801d0",
+      "decoded96_hex": "000000000001000001902dad",
+      "lc_payload_hex": "000000000001000001",
+      "rs_parity_hex": "902dad",
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 9448877,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 76503,
+      "sync_center_sample": 76503
     }
   },
   {
@@ -20,7 +59,95 @@
     "flco": "GroupVoiceChannelUser",
     "fid": "StandardizedFID",
     "extra": {
-      "cs5_ok": true
+      "cs5_ok": true,
+      "fec": {
+        "vbptc_128_72_ok": true,
+        "cs5_ok": true,
+        "emb_qr_ok_count": 4
+      },
+      "embedded_signalling": [
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 1,
+          "lcss_name": "FirstFragmentLC",
+          "emb_parity": 115,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 3,
+          "lcss_name": "ContinuationFragmentLCorCSBK",
+          "emb_parity": 150,
+          "emb_parity_ok": true
+        },
+        {
+          "colour_code": 0,
+          "preemption_power_indicator": 0,
+          "lcss": 2,
+          "lcss_name": "LastFragmentLCorCSBK",
+          "emb_parity": 229,
+          "emb_parity_ok": true
+        }
+      ],
+      "fragment_count": 4,
+      "embedded_lc_hex": "000000000001000001",
+      "cs5_value": 2,
+      "flc": {
+        "protect_flag": false,
+        "reserved_bit": 0,
+        "flco_value": 0,
+        "flco_name": "GroupVoiceChannelUser",
+        "fid_value": 0,
+        "fid_name": "StandardizedFID",
+        "crc_value": 2,
+        "call_type": "group",
+        "source_address": 1,
+        "group_address": 1,
+        "target_address": 0,
+        "service_options_value": 0,
+        "service_options": {
+          "value": 0,
+          "emergency": false,
+          "privacy": false,
+          "reserved": 0,
+          "broadcast": false,
+          "open_voice_call_mode": false,
+          "priority": 0
+        }
+      },
+      "fs_start": 93783,
+      "sync_center_sample": 93783,
+      "sync_type": "MS_VOICE"
+    }
+  },
+  {
+    "protocol": "DMR",
+    "type": "DMR_CALL",
+    "src": 1,
+    "dst": 1,
+    "ts": 0,
+    "flco": "GroupVoiceChannelUser",
+    "fid": "StandardizedFID",
+    "extra": {
+      "call_type": "group",
+      "color_code": 0,
+      "start_sample": 76503,
+      "end_sample": 1199703,
+      "duration_s": 23.4,
+      "signalling_count": 58,
+      "late_entry_count": 52,
+      "csbk_count": 0,
+      "closed_by": "end_of_scan"
     }
   }
 ]

@@ -17,6 +17,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--sample-rate", type=float, default=None)
     parser.add_argument("--blind-search", action="store_true")
     parser.add_argument("--iq-dtype", default="int16")
+    parser.add_argument("--no-dedup", dest="deduplicate", action="store_false")
+    parser.set_defaults(deduplicate=True)
     args = parser.parse_args(argv)
 
     root = os.path.abspath(args.project_root)
@@ -35,10 +37,10 @@ def main(argv: list[str] | None = None) -> int:
         sample_rate=args.sample_rate,
         blind_search=args.blind_search,
         iq_dtype=args.iq_dtype,
+        deduplicate=args.deduplicate,
     )
     return 0
 
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
