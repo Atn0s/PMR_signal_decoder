@@ -259,3 +259,9 @@ Detailed current workflow documentation:
 ```text
 docs/tetra/current_decode_workflow.md
 ```
+
+TETRA documentation index:
+
+```text
+docs/tetra/README.md
+```

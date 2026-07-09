@@ -607,3 +607,74 @@ frequency_correction_preview.txt
 2. 再解 normal_2 DNB 的 STCH，用于呼叫控制或 stealing 信息。
 3. 最后接 TCH/语音信道，进入真正的业务内容恢复。
 ```
+
+## Burst-aware 差分判决改进计划
+
+当前 `tetra.symbolDebug` 为了便于第一阶段调试，是对整个 active window 连续
+抽样并连续计算差分相位：
+
+```text
+symbol(k), symbol(k+1) -> dphi(k)
+```
+
+这会产生跨越以下区域的无意义 transition：
+
+```text
+slot guard/ramp
+burst 外空隙
+发射关闭或重新开启
+不同 burst 之间的相位重置
+active window pre-pad/post-pad
+```
+
+这些 transition 当前不会参与 timing/phase offset 估计，并且在 Fig8/Fig13 中
+标为 low-energy。后续正式链路层输入不应该依赖整段连续 hard bit stream，而
+应该改成 burst-aware 输出：
+
+```text
+1. 先用能量、训练序列和固定字段确认 DSB/DNB slot。
+2. 不跨 slot/burst 边界解释差分相位。
+3. 对每个 confirmed burst 单独形成连续 slot bit 序列。
+4. slot 开头的 guard/ramp 和不可靠初始 transition 不进入 BKN payload。
+5. 只输出结构化 BKN payload，而不是输出整段 active window bit 流。
+```
+
+目标输出结构应类似：
+
+```text
+Burst {
+  burstType
+  trainingName
+  frameNumber
+  slotNumber
+  slotStartBit
+  slotEndBit
+  bkn1Bits
+  bkn2Bits
+  validTransitionRatio
+  fieldErrors
+}
+```
+
+链路层只消费：
+
+```text
+DSB BKN1 -> SCH/S
+DSB BKN2 -> SCH/H
+DNB normal_2 BKN1 -> STCH
+DNB normal_2 BKN2 -> TCH or STCH
+DNB normal_1 BKN1+BKN2 -> TCH or SCH/F
+```
+
+链路层不消费：
+
+```text
+burst 外 hard bits
+guard/ramp bits
+跨 burst/gap 的 differential transition
+active window pre-pad/post-pad bits
+```
+
+这项改进的核心原则是：**低能量点不是要被“修正”的 payload bit，而是要在
+burst 边界确认后从链路层输入中排除；burst 内少量错误 bit 再交给训练序列、
+固定字段、RCPC、block code、CRC/FCS 等机制处理。**
