@@ -45,6 +45,11 @@ DNB normal_1 BKN1+BKN2 -> TCH or SCH/F
 burst 外 bit、guard/ramp bit、跨 burst/gap 的 differential transition 不进入
 链路层。
 
+当前实现状态：`pi4dqpskDecision` 输出每个 hard bit 的 validity/reliability，
+`inferDmoBursts` 将 validity 映射到 confirmed slot，`extractDmoPayload` 在每个
+BKN block 上记录 `validRatio`。低于 `dmoPayloadMinValidRatio` 的 BKN block 会
+被跳过，不进入 SCH/S、SCH/H、STCH 或 SCH/F 解码。
+
 ## 阶段 1：通用信令块解码器
 
 当前 `+tetra/decodeSchS.m` 只支持 SCH/S：

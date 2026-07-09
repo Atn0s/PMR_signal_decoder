@@ -9,6 +9,7 @@ p.parse(varargin{:});
 
 symbols = symbols(:);
 dphi = angle(symbols(2:end) .* conj(symbols(1:end-1)));
+transitionAmplitude = min(abs(symbols(2:end)), abs(symbols(1:end-1)));
 [signFactor, bitOrder] = variantParams(p.Results.Variant);
 observed = signFactor .* dphi;
 valid = p.Results.ValidTransitionMask;
@@ -29,9 +30,13 @@ end
 corrected = wrapToPiLocal(observed - phaseOffset);
 dist = abs(wrapToPiLocal(corrected(:) - centers(:).'));
 [~, idx] = min(dist, [], 2);
+phaseError = wrapToPiLocal(corrected - centers(idx));
 pairs = centerBits(idx, :);
 pairs = pairs(:, bitOrder);
 bits = reshape(pairs.', [], 1);
+dibitReliability = reliabilityFromPhaseAndAmplitude(phaseError, transitionAmplitude, valid);
+bitReliability = reshape(repmat(dibitReliability(:).', 2, 1), [], 1);
+bitValidMask = reshape(repmat(valid(:).', 2, 1), [], 1);
 
 decision = struct();
 decision.variant = char(p.Results.Variant);
@@ -40,11 +45,15 @@ decision.diffPhaseRaw = dphi;
 decision.diffPhaseCorrected = corrected;
 decision.symbolIndex = idx;
 decision.symbolPhase = centers(idx);
-decision.errorRad = wrapToPiLocal(corrected - centers(idx));
+decision.errorRad = phaseError;
 decision.bitPairs = pairs;
 decision.bits = bits;
 decision.dibits = pairs(:, 1) * 2 + pairs(:, 2);
 decision.validTransitionMask = valid;
+decision.transitionAmplitude = transitionAmplitude;
+decision.dibitReliability = dibitReliability;
+decision.bitReliability = bitReliability;
+decision.bitValidMask = bitValidMask;
 end
 
 function [signFactor, bitOrder] = variantParams(name)
@@ -87,4 +96,22 @@ end
 
 function y = wrapToPiLocal(x)
 y = mod(x + pi, 2 * pi) - pi;
+end
+
+function reliability = reliabilityFromPhaseAndAmplitude(phaseError, amplitude, valid)
+phaseError = abs(phaseError(:));
+amplitude = abs(amplitude(:));
+if isempty(amplitude)
+    reliability = zeros(size(phaseError));
+    return;
+end
+ampScale = prctile(amplitude, 90);
+if ampScale <= 0
+    ampScore = zeros(size(amplitude));
+else
+    ampScore = min(1, amplitude ./ ampScale);
+end
+phaseScore = max(0, 1 - phaseError ./ (pi / 4));
+reliability = ampScore(:) .* phaseScore(:);
+reliability(~valid(:)) = 0;
 end

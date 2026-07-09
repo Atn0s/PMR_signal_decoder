@@ -39,6 +39,13 @@ assert(~isempty(idxDnbBkn2) && isequal(blocks(idxDnbBkn2).bits, dnbBkn2));
 assert(dmo.schSDecodedCount >= 1);
 idxDsb = find(strcmp({dmo.bursts.burstType}, 'DSB') & [dmo.bursts.slotStartBit] == 1, 1);
 assert(~isempty(idxDsb) && dmo.bursts(idxDsb).frameNumber == 6 && dmo.bursts(idxDsb).slotNumber == 1);
+validMask = true(size(bits));
+dnbSlotStart = cfg.slotBits + 1;
+validMask(dnbSlotStart + dnb2Def.bkn2StartBit - 1:dnbSlotStart + dnb2Def.bkn2EndBit - 1) = false;
+dmoMasked = tetra.inferDmoBursts(bits, training, seqs, cfg, validMask);
+maskedBlocks = dmoMasked.payloadBlocks;
+idxMaskedBkn2 = find([maskedBlocks.slotStartBit] == dnbSlotStart & strcmp({maskedBlocks.blockName}, 'BKN2'), 1);
+assert(~isempty(idxMaskedBkn2) && maskedBlocks(idxMaskedBkn2).validRatio == 0);
 
 schSType1 = makeSchSType1(3, 12);
 schSBlock = encodeSchS(schSType1);
@@ -89,6 +96,10 @@ if exist(tetraSample, 'file') == 2
     assert(isstruct(pdus));
     assert(any(strcmp({pdus.type}, 'TETRA_DMAC_SYNC')));
     assert(any(strcmp({pdus.type}, 'TETRA_SESSION')));
+    tetraEvents = pdus(startsWith({pdus.type}, 'TETRA_') & ~strcmp({pdus.type}, 'TETRA_SESSION'));
+    assert(isfield(tetraEvents(1).extra, 'valid_transition_ratio'));
+    ratios = arrayfun(@(p) radio.getNestedField(p, 'extra.valid_transition_ratio', NaN), tetraEvents);
+    assert(any(ratios > 0.7));
     fprintf('TETRA sample decoded PDUs/events: %d\n', numel(pdus));
 end
 

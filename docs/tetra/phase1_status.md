@@ -156,6 +156,12 @@ burst spans. In the current DMO long-window sample, 96.2 % of transitions inside
 confirmed bursts are timing-valid, while only 0.2 % outside confirmed bursts are
 timing-valid.
 
+The decoder now carries this burst-aware validity into the link-layer input:
+`pi4dqpskDecision` exports `bitValidMask` and reliability fields,
+`inferDmoBursts` maps them onto confirmed slots, and each extracted BKN block
+records `validRatio`. Blocks below `dmoPayloadMinValidRatio` are skipped instead
+of being consumed as payload.
+
 ## Sample Files
 
 Default DMO sample:

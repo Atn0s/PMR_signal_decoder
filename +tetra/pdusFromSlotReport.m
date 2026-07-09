@@ -114,6 +114,9 @@ extra.context_message_type_text = block.contextMessageTypeText;
 extra.block_code_errors = block.blockCodeErrors;
 extra.tail_errors = block.tailErrors;
 extra.rcpc_metric = block.rcpcMetric;
+extra.block_valid_bit_count = fieldOr(block, 'validBitCount', 0);
+extra.block_invalid_bit_count = fieldOr(block, 'invalidBitCount', 0);
+extra.block_valid_ratio = fieldOr(block, 'validRatio', NaN);
 if isfield(mp, 'message')
     extra.message_dependent = mp.message.messageDependent;
     extra.dm_sdu = mp.message.dmSdu;
@@ -149,6 +152,9 @@ extra.context_message_type_text = block.contextMessageTypeText;
 extra.mni = fieldOr(ctx, 'mobileNetworkIdentity', NaN);
 extra.dcc = fieldOr(ctx, 'dccText', '');
 extra.service = contextService(ctx);
+extra.block_valid_bit_count = fieldOr(block, 'validBitCount', 0);
+extra.block_invalid_bit_count = fieldOr(block, 'invalidBitCount', 0);
+extra.block_valid_ratio = fieldOr(block, 'validRatio', NaN);
 pdu = makePdu('TETRA_TCH_CANDIDATE', src, dst, burst.slotNumber, 'TCH', extra, []);
 end
 
@@ -171,6 +177,9 @@ extra.timing_phase_samples = fieldOr(context, 'timingPhaseSamples', NaN);
 extra.timing_error_rad = fieldOr(context, 'timingErrorRad', NaN);
 extra.coarse_frequency_offset_hz = fieldOr(context, 'coarseFrequencyOffsetHz', NaN);
 extra.residual_correction_hz = fieldOr(context, 'residualCorrectionHz', NaN);
+extra.valid_bit_count = fieldOr(burst, 'validBitCount', 0);
+extra.invalid_bit_count = fieldOr(burst, 'invalidBitCount', 0);
+extra.valid_transition_ratio = fieldOr(burst, 'validBitRatio', NaN);
 end
 
 function sessions = sessionPdus(pdus)

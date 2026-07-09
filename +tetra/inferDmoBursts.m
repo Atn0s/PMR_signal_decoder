@@ -1,4 +1,4 @@
-function report = inferDmoBursts(bits, training, seqs, cfg)
+function report = inferDmoBursts(bits, training, seqs, cfg, bitValidMask)
 %INFERDMOBURSTS Infer, classify, and extract DMO DNB/DSB payload blocks.
 if nargin < 3 || isempty(seqs)
     seqs = tetra.trainingSequences();
@@ -8,6 +8,11 @@ if nargin < 4 || isempty(cfg)
 end
 
 bits = bits(:) ~= 0;
+if nargin < 5 || isempty(bitValidMask) || numel(bitValidMask) ~= numel(bits)
+    bitValidMask = true(size(bits));
+else
+    bitValidMask = logical(bitValidMask(:));
+end
 defs = tetra.dmoBurstDefinitions(seqs, cfg);
 candidates = repmat(emptyCandidate(), 0, 1);
 
@@ -29,16 +34,18 @@ for k = 1:numel(training.hits)
         payloadBlocks = struct([]);
         classification = incompleteClassification(def);
         link = emptyDmoLink();
+        slotValidMask = false(0, 1);
         if isComplete
             slotBits = bits(slotStart:slotEnd);
+            slotValidMask = bitValidMask(slotStart:slotEnd);
             bitString = bitsToString(slotBits);
             dibitString = dibitsToString(slotBits);
             classification = tetra.classifyDmoBurst(slotBits, def, cfg);
-            payloadBlocks = tetra.extractDmoPayload(slotBits, classification, slotStart);
+            payloadBlocks = tetra.extractDmoPayload(slotBits, classification, slotStart, slotValidMask);
             link = decodeDsbSyncIfPresent(classification, payloadBlocks, cfg);
         end
         candidates(end+1, 1) = makeCandidate(hit, def, classification, ... %#ok<AGROW>
-            slotStart, slotEnd, isComplete, bitString, dibitString, payloadBlocks, link);
+            slotStart, slotEnd, isComplete, bitString, dibitString, slotValidMask, payloadBlocks, link);
     end
 end
 
@@ -107,12 +114,15 @@ c = struct( ...
     'timingSource', '', ...
     'timingSlotDelta', NaN, ...
     'payloadBlocks', struct([]), ...
+    'validBitCount', 0, ...
+    'invalidBitCount', 0, ...
+    'validBitRatio', NaN, ...
     'bitString', '', ...
     'dibitString', '');
 end
 
 function c = makeCandidate(hit, def, cls, slotStart, slotEnd, isComplete, ...
-        bitString, dibitString, payloadBlocks, link)
+        bitString, dibitString, slotValidMask, payloadBlocks, link)
 c = emptyCandidate();
 c.slotStartBit = slotStart;
 c.slotEndBit = slotEnd;
@@ -168,6 +178,11 @@ if ~isempty(link.schS)
     end
 end
 c.payloadBlocks = payloadBlocks;
+if ~isempty(slotValidMask)
+    c.validBitCount = nnz(slotValidMask);
+    c.invalidBitCount = numel(slotValidMask) - c.validBitCount;
+    c.validBitRatio = c.validBitCount / numel(slotValidMask);
+end
 c.bitString = bitString;
 c.dibitString = dibitString;
 end
@@ -196,15 +211,19 @@ end
 idx = find(strcmp({payloadBlocks.blockName}, 'BKN1') & ...
     strcmp({payloadBlocks.logicalChannelHint}, 'SCH/S'), 1);
 if ~isempty(idx)
-    link.schS = tetra.decodeSchS(payloadBlocks(idx).bits, cfg);
-    link.schSOk = link.schS.ok;
+    if payloadValidEnough(payloadBlocks(idx), cfg)
+        link.schS = tetra.decodeSchS(payloadBlocks(idx).bits, cfg);
+        link.schSOk = link.schS.ok;
+    end
 end
 idxH = find(strcmp({payloadBlocks.blockName}, 'BKN2') & ...
     strcmp({payloadBlocks.logicalChannelHint}, 'SCH/H'), 1);
 if ~isempty(idxH)
-    link.schH = tetra.decodeDmoSignallingBlock(payloadBlocks(idxH).bits, ...
-        'SCH/H', zeros(30, 1) ~= 0, cfg);
-    link.schHOk = link.schH.ok;
+    if payloadValidEnough(payloadBlocks(idxH), cfg)
+        link.schH = tetra.decodeDmoSignallingBlock(payloadBlocks(idxH).bits, ...
+            'SCH/H', zeros(30, 1) ~= 0, cfg);
+        link.schHOk = link.schH.ok;
+    end
 end
 if isempty(link.schS) || isempty(link.schH) || ~link.schS.ok || ~link.schH.ok
     return;
@@ -395,6 +414,10 @@ function block = decodeMacBlock(meta, bits, logicalChannel, context, cfg)
 block = macBlockFromMeta(meta, logicalChannel, context);
 block.rawBitLength = numel(bits);
 block.rawBitString = bitsToString(bits);
+if ~payloadValidEnough(meta, cfg)
+    block.status = sprintf('skipped: low burst-valid ratio %.3f', meta.validRatio);
+    return;
+end
 if ~context.valid
     block.status = 'skipped: no DCC context';
     return;
@@ -439,6 +462,9 @@ block.startBitInSlot = meta.startBitInSlot;
 block.endBitInSlot = meta.endBitInSlot;
 block.absoluteStartBit = meta.absoluteStartBit;
 block.absoluteEndBit = meta.absoluteEndBit;
+block.validBitCount = fieldOr(meta, 'validBitCount', 0);
+block.invalidBitCount = fieldOr(meta, 'invalidBitCount', 0);
+block.validRatio = fieldOr(meta, 'validRatio', NaN);
 block.frameNumber = context.frameNumber;
 block.slotNumber = context.slotNumber;
 block.contextValid = context.valid;
@@ -457,6 +483,10 @@ meta.absoluteStartBit = block1.absoluteStartBit;
 meta.absoluteEndBit = block2.absoluteEndBit;
 meta.length = block1.length + block2.length;
 meta.bits = [block1.bits(:); block2.bits(:)];
+meta.validMask = [block1.validMask(:); block2.validMask(:)];
+meta.validBitCount = block1.validBitCount + block2.validBitCount;
+meta.invalidBitCount = block1.invalidBitCount + block2.invalidBitCount;
+meta.validRatio = safeRatio(meta.validBitCount, meta.length);
 meta.bitString = bitsToString(meta.bits);
 end
 
@@ -540,7 +570,26 @@ block = struct( ...
     'decoded', struct([]), ...
     'pdu', struct([]), ...
     'rawBitLength', 0, ...
+    'validBitCount', 0, ...
+    'invalidBitCount', 0, ...
+    'validRatio', NaN, ...
     'rawBitString', '');
+end
+
+function yes = payloadValidEnough(block, cfg)
+ratio = fieldOr(block, 'validRatio', 1);
+if isnan(ratio)
+    ratio = 1;
+end
+yes = ratio >= getCfg(cfg, 'dmoPayloadMinValidRatio', 0);
+end
+
+function r = safeRatio(n, d)
+if d <= 0
+    r = NaN;
+else
+    r = double(n) / double(d);
+end
 end
 
 function out = appendStruct(out, item)
@@ -710,6 +759,14 @@ end
 function value = getCfg(cfg, name, defaultValue)
 if isfield(cfg, name)
     value = cfg.(name);
+else
+    value = defaultValue;
+end
+end
+
+function value = fieldOr(s, name, defaultValue)
+if isstruct(s) && isfield(s, name) && ~isempty(s.(name))
+    value = s.(name);
 else
     value = defaultValue;
 end

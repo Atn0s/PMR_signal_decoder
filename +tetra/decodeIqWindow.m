@@ -49,7 +49,7 @@ end
 
 seqs = tetra.trainingSequences();
 [decision, training, variantReports] = bestDecisionVariant(sync, seqs, cfg);
-slotReport = tetra.inferDmoBursts(decision.bits, training, seqs, cfg);
+slotReport = tetra.inferDmoBursts(decision.bits, training, seqs, cfg, decision.bitValidMask);
 
 decodeContext = makeDecodeContext(context, iq72, fs72, coarseFoHz, ...
     residualHz, usedResidualCorrection, sync, decision, training);
@@ -73,6 +73,8 @@ diag.timingPhaseSamples = sync.phaseSamples;
 diag.timingErrorRad = sync.errorRad;
 diag.symbolCount = numel(sync.symbols);
 diag.bitCount = numel(decision.bits);
+diag.validBitCount = nnz(decision.bitValidMask);
+diag.validBitRatio = safeRatio(diag.validBitCount, diag.bitCount);
 diag.decisionVariant = decision.variant;
 diag.decisionPhaseOffsetRad = decision.phaseOffsetRad;
 diag.training = training;
@@ -125,6 +127,8 @@ context.decisionVariant = decision.variant;
 context.decisionPhaseOffsetRad = decision.phaseOffsetRad;
 context.symbolCount = numel(sync.symbols);
 context.bitCount = numel(decision.bits);
+context.validBitCount = nnz(decision.bitValidMask);
+context.validBitRatio = safeRatio(context.validBitCount, context.bitCount);
 context.trainingCandidateCount = training.candidateCount;
 context.trainingGoodCount = training.goodCount;
 end
@@ -163,5 +167,13 @@ if isempty(bestDecision)
         'PhaseOffsetStepRad', cfg.diffPhaseOffsetStepRad, ...
         'ValidTransitionMask', sync.validTransitionMask);
     bestTraining = tetra.findTrainingSequences(bestDecision.bits, seqs, cfg);
+end
+end
+
+function r = safeRatio(n, d)
+if d <= 0
+    r = NaN;
+else
+    r = double(n) / double(d);
 end
 end

@@ -742,9 +742,9 @@ raw_bits
 当前 session 和事件去重键。该机制等进入实时处理阶段时统一实现，当前离线文件
 解码阶段暂不考虑。
 
-## Burst-aware 差分判决改进计划
+## Burst-aware 差分判决
 
-当前 `tetra.symbolDebug` 为了便于第一阶段调试，是对整个 active window 连续
+早期 `tetra.symbolDebug` 为了便于第一阶段调试，是对整个 active window 连续
 抽样并连续计算差分相位：
 
 ```text
@@ -761,19 +761,21 @@ burst 外空隙
 active window pre-pad/post-pad
 ```
 
-这些 transition 当前不会参与 timing/phase offset 估计，并且在 Fig8/Fig13 中
-标为 low-energy。后续正式链路层输入不应该依赖整段连续 hard bit stream，而
-应该改成 burst-aware 输出：
+这些 transition 不参与 timing/phase offset 估计，并且在 Fig8/Fig13 中标为
+low-energy。当前正式链路层输入已经改成 burst-aware 方式：
 
 ```text
-1. 先用能量、训练序列和固定字段确认 DSB/DNB slot。
-2. 不跨 slot/burst 边界解释差分相位。
-3. 对每个 confirmed burst 单独形成连续 slot bit 序列。
-4. slot 开头的 guard/ramp 和不可靠初始 transition 不进入 BKN payload。
-5. 只输出结构化 BKN payload，而不是输出整段 active window bit 流。
+1. 仍用全窗口 hard bit 流完成训练序列搜索和 DSB/DNB slot 定位。
+2. `pi4dqpskDecision` 同时输出 `bitValidMask`、`bitReliability`、
+   `transitionAmplitude`。
+3. `inferDmoBursts` 把 bit validity 映射到 confirmed slot。
+4. `extractDmoPayload` 对 BKN1/BKN2 输出 `validMask`、`validBitCount`、
+   `invalidBitCount`、`validRatio`。
+5. 链路层解码只消费 confirmed burst 的 BKN payload；低于
+   `cfg.dmoPayloadMinValidRatio` 的 payload block 会被跳过。
 ```
 
-目标输出结构应类似：
+输出结构包含：
 
 ```text
 Burst {
@@ -785,7 +787,7 @@ Burst {
   slotEndBit
   bkn1Bits
   bkn2Bits
-  validTransitionRatio
+  validBitRatio
   fieldErrors
 }
 ```
@@ -812,6 +814,10 @@ active window pre-pad/post-pad bits
 这项改进的核心原则是：**低能量点不是要被“修正”的 payload bit，而是要在
 burst 边界确认后从链路层输入中排除；burst 内少量错误 bit 再交给训练序列、
 固定字段、RCPC、block code、CRC/FCS 等机制处理。**
+
+当前 full-file DMO 样本的窗口扫描结果中，事件 PDU 的
+`extra.valid_transition_ratio` 中位数约为 `0.922`。这说明链路层主要消费的
+是 confirmed burst 内部的有效 transition，而不是 active window 中的灰点。
 
 ## Hard bit 到 soft bit 的改进计划
 
