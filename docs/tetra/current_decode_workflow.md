@@ -548,6 +548,19 @@ schs_preview.txt
 frequency_correction_preview.txt
 ```
 
+`09_decision_preview` deliberately starts at the first confirmed burst when one
+is available. If it started at the active-window pre-pad, the displayed dibits
+could be dominated by noise or ramp-up before the first DSB and therefore show a
+misleading subset of dibit levels.
+
+`13_transition_validity` compares the Fig8 timing-valid/low-energy transition
+mask with confirmed DSB/DNB spans. In the current long-window DMO sample,
+transitions inside confirmed bursts are timing-valid about 96.2 % of the time,
+while transitions outside confirmed bursts are timing-valid only about 0.2 % of
+the time. This confirms that most Fig8 grey points are off-burst gaps,
+guard/ramp regions, or burst-boundary transitions rather than TETRA payload
+symbols.
+
 关键文件：
 
 ```text

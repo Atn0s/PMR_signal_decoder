@@ -142,10 +142,11 @@ if p.Results.CreateFigures
     plotTiming(sync, figOptions);
     plotSymbolConstellation(sync.symbols, figOptions);
     plotDiffConstellation(bestDecision, figOptions);
-    plotDecisionPreview(bestDecision, figOptions);
+    plotDecisionPreview(bestDecision, slotReport, figOptions);
     plotTraining(bestTraining, variantReports, figOptions);
     plotSlotCandidates(slotReport, figOptions);
     plotFrequencyCorrection(freqCorrectionReport, figOptions);
+    plotTransitionValidity(sync, bestDecision, slotReport, figOptions);
 end
 
 save(fullfile(outputDir, 'summary.mat'), 'result', 'cfg');
@@ -374,26 +375,62 @@ legend(ax2, {'ignored/low energy', 'timing-valid'}, 'Location', 'best');
 finishFig(fig, figOptions, '08_diff_constellation.png');
 end
 
-function plotDecisionPreview(decision, figOptions)
+function plotDecisionPreview(decision, slotReport, figOptions)
 fig = newFig('09 Decision Preview', figOptions);
 tl = tiledlayout(fig, 2, 1, 'TileSpacing', 'compact', 'Padding', 'compact');
-n = min(numel(decision.dibits), 260);
+[startBit, label] = previewStartBit(slotReport);
+startDibit = max(1, ceil(startBit / 2));
+n = min(260, numel(decision.dibits) - startDibit + 1);
 ax1 = nexttile(tl);
-stem(ax1, 1:n, decision.dibits(1:n), '.', 'Color', [0.10 0.35 0.65]);
+if n > 0
+    idx = startDibit:(startDibit + n - 1);
+    valid = decision.validTransitionMask(:);
+    if numel(valid) ~= numel(decision.dibits)
+        valid = true(size(decision.dibits(:)));
+    end
+    low = ~valid(idx);
+    x = 2 .* idx - 1;
+    if any(low)
+        stem(ax1, x(low), decision.dibits(idx(low)), '.', ...
+            'Color', [0.70 0.70 0.70]);
+        hold(ax1, 'on');
+    end
+    stem(ax1, x(~low), decision.dibits(idx(~low)), '.', ...
+        'Color', [0.10 0.35 0.65]);
+end
 grid(ax1, 'on');
 ylim(ax1, [-0.5 3.5]);
-title(ax1, 'Dibit preview');
-xlabel(ax1, 'Dibit index');
+title(ax1, sprintf('Dibit preview from %s', label), 'Interpreter', 'none');
+xlabel(ax1, 'Recovered bit index (dibit start)');
 ylabel(ax1, 'Dibit value');
 ax2 = nexttile(tl);
-nb = min(numel(decision.bits), 520);
-stairs(ax2, 1:nb, double(decision.bits(1:nb)), 'Color', [0.15 0.45 0.20]);
+nb = min(520, numel(decision.bits) - startBit + 1);
+if nb > 0
+    bitIdx = startBit:(startBit + nb - 1);
+    stairs(ax2, bitIdx, double(decision.bits(bitIdx)), 'Color', [0.15 0.45 0.20]);
+end
 ylim(ax2, [-0.2 1.2]);
 grid(ax2, 'on');
-title(ax2, 'Hard bit preview');
-xlabel(ax2, 'Bit index');
+title(ax2, sprintf('Hard bit preview from %s', label), 'Interpreter', 'none');
+xlabel(ax2, 'Recovered bit index');
 ylabel(ax2, 'Bit');
 finishFig(fig, figOptions, '09_decision_preview.png');
+end
+
+function [startBit, label] = previewStartBit(slotReport)
+startBit = 1;
+label = 'active-window start';
+if ~isfield(slotReport, 'bursts') || isempty(slotReport.bursts)
+    return;
+end
+b = slotReport.bursts(1);
+startBit = max(1, b.slotStartBit);
+timing = '';
+if isfield(b, 'timingLabel') && ~isempty(b.timingLabel)
+    timing = sprintf(' %s', b.timingLabel);
+end
+label = sprintf('first confirmed %s %s%s at bit %d', ...
+    b.burstType, b.trainingName, timing, b.slotStartBit);
 end
 
 function plotTraining(training, variantReports, figOptions)
@@ -679,6 +716,125 @@ xticks(ax3, tickRows);
 xticklabels(ax3, report.burstLabels(validRows(tickRows)));
 xtickangle(ax3, 20);
 finishFig(fig, figOptions, '12_frequency_correction_check.png');
+end
+
+function plotTransitionValidity(sync, decision, slotReport, figOptions)
+fig = newFig('13 Transition Validity', figOptions);
+if numel(sync.symbols) < 2 || isempty(decision.validTransitionMask)
+    text(0.5, 0.5, 'No differential transition validity data available', ...
+        'HorizontalAlignment', 'center');
+    axis off;
+    finishFig(fig, figOptions, '13_transition_validity.png');
+    return;
+end
+
+n = min([numel(sync.symbols) - 1, numel(decision.validTransitionMask), ...
+    numel(decision.dibits)]);
+sym = sync.symbols(:);
+amp = min(abs(sym(1:n)), abs(sym(2:n+1)));
+valid = logical(decision.validTransitionMask(1:n));
+x = 2 .* (1:n).' - 1;
+bursts = plotRows(slotReport);
+inside = transitionsInsideBursts(x, bursts);
+insideRatio = ratioText(valid(inside));
+outsideRatio = ratioText(valid(~inside));
+
+tl = tiledlayout(fig, 3, 1, 'TileSpacing', 'compact', 'Padding', 'compact');
+
+ax1 = nexttile(tl);
+ampDb = 20 .* log10(amp ./ max(max(amp), eps) + 1e-6);
+ylim(ax1, [-70 5]);
+shadeBurstSpans(ax1, bursts, [-70 5]);
+hold(ax1, 'on');
+plot(ax1, x, ampDb, 'Color', [0.20 0.20 0.20], 'LineWidth', 0.7);
+grid(ax1, 'on');
+title(ax1, 'Differential-transition amplitude with confirmed burst spans');
+xlabel(ax1, 'Recovered bit index');
+ylabel(ax1, 'Relative amp (dB)');
+
+ax2 = nexttile(tl);
+ylim(ax2, [-0.15 1.15]);
+shadeBurstSpans(ax2, bursts, [-0.15 1.15]);
+hold(ax2, 'on');
+stairs(ax2, x, double(valid), 'Color', [0.10 0.35 0.65], 'LineWidth', 0.8);
+grid(ax2, 'on');
+title(ax2, sprintf('Timing-valid mask, inside bursts %s, outside bursts %s', ...
+    insideRatio, outsideRatio));
+xlabel(ax2, 'Recovered bit index');
+ylabel(ax2, 'Valid');
+yticks(ax2, [0 1]);
+yticklabels(ax2, {'low energy', 'valid'});
+
+ax3 = nexttile(tl);
+plotBurstValidityRatios(ax3, x, valid, bursts);
+finishFig(fig, figOptions, '13_transition_validity.png');
+end
+
+function bursts = plotRows(slotReport)
+if isfield(slotReport, 'bursts')
+    bursts = slotReport.bursts;
+elseif isfield(slotReport, 'candidates')
+    bursts = slotReport.candidates;
+else
+    bursts = struct([]);
+end
+end
+
+function inside = transitionsInsideBursts(x, bursts)
+inside = false(size(x));
+for k = 1:numel(bursts)
+    inside = inside | (x >= bursts(k).slotStartBit & x <= bursts(k).slotEndBit);
+end
+end
+
+function txt = ratioText(mask)
+if isempty(mask)
+    txt = 'n/a';
+else
+    txt = sprintf('%.1f%%', 100 * mean(mask));
+end
+end
+
+function shadeBurstSpans(ax, bursts, yRange)
+if isempty(bursts)
+    return;
+end
+for k = 1:numel(bursts)
+    b = bursts(k);
+    color = burstColor(b);
+    patch(ax, ...
+        [b.slotStartBit b.slotEndBit b.slotEndBit b.slotStartBit], ...
+        [yRange(1) yRange(1) yRange(2) yRange(2)], ...
+        color, 'FaceAlpha', 0.06, 'EdgeColor', 'none');
+end
+end
+
+function plotBurstValidityRatios(ax, x, valid, bursts)
+if isempty(bursts)
+    text(ax, 0.5, 0.5, 'No confirmed bursts to compare', ...
+        'HorizontalAlignment', 'center');
+    axis(ax, 'off');
+    return;
+end
+hold(ax, 'on');
+for k = 1:numel(bursts)
+    b = bursts(k);
+    mask = x >= b.slotStartBit & x <= b.slotEndBit;
+    if any(mask)
+        ratio = mean(valid(mask));
+    else
+        ratio = NaN;
+    end
+    plot(ax, b.slotStartBit, ratio, 'o', ...
+        'MarkerFaceColor', burstColor(b), ...
+        'MarkerEdgeColor', 'none', ...
+        'MarkerSize', 6);
+end
+ylim(ax, [0 1.05]);
+grid(ax, 'on');
+title(ax, 'Timing-valid transition ratio per confirmed burst');
+xlabel(ax, 'Burst start bit');
+ylabel(ax, 'Valid ratio');
 end
 
 function ticks = thinnedTicks(n, maxTicks)

@@ -32,7 +32,7 @@ outputs/tetra_symbol_debug/interactive_latest
 `slots_preview.txt`, `dmo_payload_preview.txt`, `schs_preview.txt`, and
 `frequency_correction_preview.txt` to the selected output directory.
 The current interactive default is `ShowFigures=true` and `SaveFigures=false`,
-so the example opens twelve processing-stage figure windows and does not save
+so the example opens thirteen processing-stage figure windows and does not save
 PNG files by default.
 
 To save the processing-stage figures as PNG files, call:
@@ -57,6 +57,13 @@ next visible DSB synchronization sequence, and the DNB payloads after it.
 `02_active_window` contains a full-file envelope preview and a zoomed view around
 the selected active window. `11_slot_candidates` contains a full confirmed-burst
 overview plus a detailed BKN view for the first confirmed bursts.
+`13_transition_validity` overlays the Fig8 timing-valid/low-energy transition
+mask with confirmed burst spans, which helps distinguish off-burst gaps and
+guard/ramp transitions from useful burst interiors.
+
+`09_decision_preview` starts at the first confirmed burst when one is available.
+This avoids interpreting the active-window pre-pad, which may contain only noise
+or ramp-up, as meaningful TETRA dibits.
 
 The DMO slot output uses EN 300 396-2 field positions, not a centered-training
 shortcut:

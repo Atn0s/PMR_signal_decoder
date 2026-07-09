@@ -107,7 +107,7 @@ ShowFigures=true
 SaveFigures=false
 ```
 
-Running the example script opens twelve processing-stage figure windows and does
+Running the example script opens thirteen processing-stage figure windows and does
 not save PNG files by default.
 
 To save figures:
@@ -126,6 +126,7 @@ drift or reset. For synchronization and decision quality, focus on:
 10_training_sequence_check
 11_slot_candidates
 12_frequency_correction_check
+13_transition_validity
 ```
 
 `11_slot_candidates` now shows confirmed DMO bursts and extracted BKN payload
@@ -135,6 +136,10 @@ The filename is kept for compatibility with earlier debug output.
 `12_frequency_correction_check` verifies the DSB frequency-correction field by
 comparing observed differential-symbol frequencies against the expected
 `-6.75 kHz / +2.25 kHz / -6.75 kHz` pattern.
+`13_transition_validity` validates the Fig8 low-energy mask against confirmed
+burst spans. In the current DMO long-window sample, 96.2 % of transitions inside
+confirmed bursts are timing-valid, while only 0.2 % outside confirmed bursts are
+timing-valid.
 
 ## Sample Files
 
