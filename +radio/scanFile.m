@@ -1,5 +1,5 @@
 function pdus = scanFile(path, varargin)
-%SCANFILE Scan an offline IQ file for DMR, P25, dPMR, and TETRA metadata.
+%SCANFILE Scan an offline IQ file for DMR, P25, dPMR, NXDN, and TETRA metadata.
 p = inputParser;
 p.addParameter('FreqList', []);
 p.addParameter('BlindSearch', false);
@@ -12,6 +12,7 @@ p.addParameter('DecoderBackend', 'matlab');
 p.addParameter('PythonRoot', '');
 p.addParameter('PythonExecutable', '');
 p.addParameter('Deduplicate', true);
+p.addParameter('ShowProgress', false);
 p.parse(varargin{:});
 
 backend = lower(char(p.Results.PipelineBackend));
@@ -44,7 +45,8 @@ switch backend
             'DecoderBackend', p.Results.DecoderBackend, ...
             'PythonRoot', p.Results.PythonRoot, ...
             'PythonExecutable', p.Results.PythonExecutable, ...
-            'Deduplicate', p.Results.Deduplicate);
+            'Deduplicate', p.Results.Deduplicate, ...
+            'ShowProgress', p.Results.ShowProgress);
     otherwise
         error('radio:scanFile:UnsupportedBackend', ...
             'Unsupported pipeline backend: %s', backend);

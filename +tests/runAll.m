@@ -19,6 +19,34 @@ assert(~explicitDefaultBlind && any(strcmp(defaultBlind, 'NXDN')) && ...
 [defaultFreq, explicitDefaultFreq] = radio.resolveScanProtocols({}, 'FreqList', 0);
 assert(~explicitDefaultFreq && any(strcmp(defaultFreq, 'NXDN')) && ...
     any(strcmp(defaultFreq, 'TETRA')));
+% A single 4FSK carrier has several spectral lobes but must yield one
+% channel-level blind-search candidate.
+savedRng = rng;
+rng(7);
+fskMap = [-2400; -800; 800; 2400];
+instantaneousHz = repelem(fskMap(randi(4, 4800, 1)), 10);
+synthetic4fsk = exp(1i .* cumsum(2 .* pi .* instantaneousHz ./ 48000));
+synthetic4fsk = synthetic4fsk + 0.02 .* ...
+    (randn(size(synthetic4fsk)) + 1i .* randn(size(synthetic4fsk)));
+rng(savedRng);
+blindOffsets = radio.psdBlindSearch(synthetic4fsk, 48000, radio.defaultConfig());
+assert(numel(blindOffsets) == 1 && abs(blindOffsets(1)) < 1000);
+% Two narrow carriers at the minimum standard 6.25 kHz channel spacing must
+% remain separate after channel-energy smoothing.
+savedRng = rng;
+rng(17);
+narrowFskMap = [-1050; -350; 350; 1050];
+leftHz = repelem(narrowFskMap(randi(4, 4800, 1)), 40) - 3125;
+rightHz = repelem(narrowFskMap(randi(4, 4800, 1)), 40) + 3125;
+twoChannel4fsk = exp(1i .* cumsum(2 .* pi .* leftHz ./ 192000)) + ...
+    exp(1i .* cumsum(2 .* pi .* rightHz ./ 192000));
+twoChannel4fsk = twoChannel4fsk + 0.02 .* ...
+    (randn(size(twoChannel4fsk)) + 1i .* randn(size(twoChannel4fsk)));
+rng(savedRng);
+adjacentOffsets = sort(radio.psdBlindSearch( ...
+    twoChannel4fsk, 192000, radio.defaultConfig()));
+assert(numel(adjacentOffsets) == 2);
+assert(all(abs(adjacentOffsets - [-3125, 3125]) < 1000));
 assert(numel(radio.deduplicatePdus(makeP25SemanticDuplicates())) == 1);
 assert(numel(radio.deduplicatePdus(makeDpmrSemanticDuplicates())) == 1);
 syntheticNid = false(64, 1);

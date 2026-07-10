@@ -9,6 +9,7 @@ p.addParameter('DecoderBackend', 'matlab');
 p.addParameter('PythonRoot', '');
 p.addParameter('PythonExecutable', '');
 p.addParameter('Deduplicate', true);
+p.addParameter('ShowProgress', false);
 p.parse(varargin{:});
 
 if isempty(sampleRate)
@@ -42,7 +43,8 @@ if ~isempty(narrowEnabled)
         'DecoderBackend', p.Results.DecoderBackend, ...
         'PythonRoot', p.Results.PythonRoot, ...
         'PythonExecutable', p.Results.PythonExecutable, ...
-        'Deduplicate', p.Results.Deduplicate);
+        'Deduplicate', p.Results.Deduplicate, ...
+        'ShowProgress', p.Results.ShowProgress);
     pdus = radio.appendPdus(pdus, next);
 end
 if ~isempty(windowEnabled)

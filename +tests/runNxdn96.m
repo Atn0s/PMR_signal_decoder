@@ -127,6 +127,8 @@ for sampleIndex = 1:2
         assert(isequal(sort(pduSignatures(defaultRaw)), ...
             sort(pduSignatures(scannerRaw))));
         crop = iq(round(1.2 * 78125):round(1.7 * 78125));
+        blindOffsets = radio.psdBlindSearch(crop, 78125, radio.defaultConfig());
+        assert(numel(blindOffsets) == 1 && abs(blindOffsets(1)) < 1000);
         knownFreqPdus = radio.scanIq(crop, 78125, 'FreqList', 0, ...
             'DecoderBackend', 'matlab');
         assert(~isempty(knownFreqPdus));

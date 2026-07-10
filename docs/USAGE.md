@@ -77,6 +77,13 @@ windowed-IQ branch. Default wideband blind search still scans only the narrowban
 DMR/P25/dPMR/NXDN branch; pass `ProtocolNames`, or pass `FreqList` for explicit
 candidate offsets when TETRA should be considered.
 
+Blind-search PSD detection integrates power across a 4.8 kHz modulation window
+before selecting candidates. This prevents the multiple spectral lines of one
+DMR/P25/dPMR/NXDN carrier from being decoded repeatedly as separate radios while
+retaining separate candidates at the standard 6.25 kHz channel spacing.
+`scanner.m` prints candidate progress; library calls remain quiet unless
+`ShowProgress=true` is passed.
+
 Current dispatch rules:
 
 ```text

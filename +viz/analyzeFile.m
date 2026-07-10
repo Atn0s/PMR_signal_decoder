@@ -12,6 +12,7 @@ p.addParameter('PythonRoot', '');
 p.addParameter('PythonExecutable', '');
 p.addParameter('Deduplicate', true);
 p.addParameter('CreateFigure', true);
+p.addParameter('ShowProgress', false);
 p.parse(varargin{:});
 
 iq = common.readRawIq(path, 'DType', p.Results.IqDType);
@@ -50,7 +51,8 @@ pdus = radio.scanFile(path, ...
     'DecoderBackend', p.Results.DecoderBackend, ...
     'PythonRoot', p.Results.PythonRoot, ...
     'PythonExecutable', p.Results.PythonExecutable, ...
-    'Deduplicate', p.Results.Deduplicate);
+    'Deduplicate', p.Results.Deduplicate, ...
+    'ShowProgress', p.Results.ShowProgress);
 
 result = struct();
 result.path = char(path);

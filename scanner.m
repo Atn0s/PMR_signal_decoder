@@ -1,7 +1,7 @@
 %% Unified DMR/P25/dPMR/NXDN/TETRA scanner entry
 % Edit the configuration block, then click Run in MATLAB.
 
-TARGET_FILE = '/home/lzkj/lzkj_workspace/python_docs/DMR_demo/data/synthesized_wideband_2.5MHz.rawiq';
+TARGET_FILE = '/home/lzkj/lzkj_workspace/matlab_docs/signal_data/nxdn96_2_78125.rawiq';
 
 % Use {} for scan-mode defaults, or: {'dmr'}, {'p25'}, {'dpmr'}, {'nxdn'}, {'tetra'}.
 % Defaults: centered/FREQ_LIST/BlindSearch include NXDN; FREQ_LIST also includes TETRA.
@@ -41,6 +41,7 @@ result = viz.analyzeFile(TARGET_FILE, ...
     'PipelineBackend', PIPELINE_BACKEND, ...
     'DecoderBackend', DECODER_BACKEND, ...
     'Deduplicate', DEDUPLICATE, ...
+    'ShowProgress', true, ...
     'CreateFigure', SHOW_FIGURE);
 
 pdus = result.pdus;
