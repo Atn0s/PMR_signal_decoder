@@ -110,6 +110,7 @@ branch strategy, and exact blind-search behavior are recorded in:
 
 ```text
 docs/已知频点多制式并行识别方案.md
+docs/实时微批处理五制式并行识别架构设计.md
 ```
 
 ## JSON Output
