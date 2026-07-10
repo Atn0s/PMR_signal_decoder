@@ -38,8 +38,17 @@ TETRA 单模式全文件多窗口实验入口：
 run('examples/tetra/tetra_full_file_scan.m')
 ```
 
-它暂时不接入 `scanner.m`，用于先验证整段 DMO 文件中的 DSB/DNB/STCH/TCH
-candidate 时序和 session 汇总。
+该入口和统一 `radio.scanFile(..., 'ProtocolNames', {'tetra'})` 共用
+`tetra.scanIqWindows` 核心。区别是前者会返回窗口诊断、功率包络和可选输出文件，
+后者只返回统一 PDU/event 数组，便于和 DMR/P25/dPMR 一起处理。
+
+统一入口的限制：
+
+```text
+默认宽带盲扫不包含 TETRA。
+指定 FreqList 且未指定协议时，会同时尝试 DMR/P25/dPMR 和 TETRA。
+显式指定 TETRA 但要求无 FreqList 的宽带盲扫，会直接报错。
+```
 
 进入链路层实现前，再读：
 

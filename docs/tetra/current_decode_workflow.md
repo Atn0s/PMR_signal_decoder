@@ -53,8 +53,21 @@ result = tetra.scanFileWindows(file);
 run('examples/tetra/tetra_full_file_scan.m')
 ```
 
-该入口暂时不接入 `scanner.m`，用于先观察整段 DMO 文件中的 DSB/DNB/STCH/TCH
-candidate 和 session 时序。
+该入口和统一 `radio.scanFile(..., 'ProtocolNames', {'tetra'})` 共用
+`tetra.scanIqWindows` 核心。`radio.scanFile` 只返回统一 PDU/event 数组；
+`tetra.scanFileWindows` 额外返回窗口报告、功率包络和可选输出文件，用于诊断。
+
+统一入口的当前调度规则：
+
+```text
+DMR/P25/dPMR -> 48 kHz narrowband 4FSK 分支
+TETRA        -> 72 kHz windowed-IQ 分支
+
+BlindSearch=true 且未指定协议      -> 默认只扫 DMR/P25/dPMR
+FreqList 非空且未指定协议          -> DMR/P25/dPMR + TETRA 都尝试
+显式指定 TETRA + BlindSearch=true + 无 FreqList
+                                  -> 报错，宽带 TETRA 盲扫暂未实现
+```
 
 MATLAB 的 `+tetra`、`+common` 目录是 package 目录。例如：
 

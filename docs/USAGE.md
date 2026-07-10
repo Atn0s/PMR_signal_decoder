@@ -54,8 +54,37 @@ result = viz.analyzeFile('/path/to/signal.rawiq', ...
     'CreateFigure', true);
 ```
 
-`tetra.scanFileWindows` is a TETRA-only experiment entry point and is not wired
-through `scanner.m` yet.
+TETRA is wired through `radio.scanFile` / `scanner.m` as a separate 72 kHz
+windowed-IQ branch. Default wideband blind search still scans only the narrowband
+DMR/P25/dPMR branch; pass `ProtocolNames`, or pass `FreqList` for explicit
+candidate offsets when TETRA should be considered.
+
+Current dispatch rules:
+
+```text
+BlindSearch=true, no ProtocolNames     -> DMR/P25/dPMR only
+FreqList set, BlindSearch=false,
+no ProtocolNames                       -> DMR/P25/dPMR + TETRA
+FreqList set, BlindSearch=true,
+no ProtocolNames                       -> DMR/P25/dPMR only (current resolver precedence)
+ProtocolNames contains 'tetra'         -> run TETRA unless unsupported
+ProtocolNames contains 'tetra' and BlindSearch=true without FreqList
+                                      -> error; wideband TETRA blind scan is not implemented
+```
+
+`tetra.scanFileWindows` remains the TETRA-only diagnostic entry point. It returns
+window reports, envelope information, readable lines, and optional files under
+`OutputDir`.
+
+## Future Known-Frequency Protocol Race
+
+The current serial scanner remains the compatibility baseline. The planned
+known-frequency multi-protocol probe/race design, MATLAB-versus-Python decision,
+branch strategy, and exact blind-search behavior are recorded in:
+
+```text
+docs/已知频点多制式并行识别方案.md
+```
 
 ## JSON Output
 

@@ -28,7 +28,9 @@ cfg = radio.defaultConfig();
 [previewIq, previewFs, previewFo, candidates] = preparePreviewIq( ...
     iq, fs, p.Results.FreqList, p.Results.BlindSearch, cfg);
 
-enabled = radio.normalizeProtocolNames(p.Results.ProtocolNames);
+[enabled, ~] = radio.resolveScanProtocols(p.Results.ProtocolNames, ...
+    'FreqList', p.Results.FreqList, ...
+    'BlindSearch', p.Results.BlindSearch);
 frontProtocol = enabled{1};
 frontendError = '';
 try

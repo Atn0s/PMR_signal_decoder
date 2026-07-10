@@ -1,6 +1,9 @@
 # Runtime outputs
 outputs/
 
+# Local signal captures
+signal_data/
+
 # MATLAB generated files
 *.asv
 *.m~

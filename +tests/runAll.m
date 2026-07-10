@@ -6,6 +6,15 @@ addpath(root);
 assert(common.detectSampleRate('data/dmr_1_78125.rawiq') == 78125);
 assert(common.detectSampleRate('data/synthesized_wideband_2.5MHz.rawiq') == 2500000);
 assert(isequal(radio.normalizeProtocolNames({'dmr', 'P25', 'dpmr', 'tetra'}), {'DMR', 'P25', 'dPMR', 'TETRA'}));
+specs = radio.protocolRegistry();
+tetraSpec = specs(strcmp({specs.name}, 'TETRA'));
+assert(strcmp(tetraSpec.scanMode, 'windowed_iq'));
+assert(tetraSpec.targetSampleRateHz == 72000);
+assert(~tetraSpec.supportsBlindSearch);
+[defaultBlind, explicitDefaultBlind] = radio.resolveScanProtocols({}, 'BlindSearch', true);
+assert(~explicitDefaultBlind && ~any(strcmp(defaultBlind, 'TETRA')));
+[defaultFreq, explicitDefaultFreq] = radio.resolveScanProtocols({}, 'FreqList', 0);
+assert(~explicitDefaultFreq && any(strcmp(defaultFreq, 'TETRA')));
 assert(numel(radio.deduplicatePdus(makeP25SemanticDuplicates())) == 1);
 assert(numel(radio.deduplicatePdus(makeDpmrSemanticDuplicates())) == 1);
 syntheticNid = false(64, 1);
@@ -100,6 +109,23 @@ if exist(tetraSample, 'file') == 2
     assert(isfield(tetraEvents(1).extra, 'valid_transition_ratio'));
     ratios = arrayfun(@(p) radio.getNestedField(p, 'extra.valid_transition_ratio', NaN), tetraEvents);
     assert(any(ratios > 0.7));
+    iq = common.readRawIq(tetraSample);
+    fs = common.detectSampleRate(tetraSample);
+    cropStart = max(1, round(5.0 * fs));
+    cropEnd = min(numel(iq), round(7.6 * fs));
+    crop = iq(cropStart:cropEnd);
+    result = tetra.scanIqWindows(crop, fs, 'ShowProgress', false, ...
+        'WriteOutputs', false, 'MaxWindows', 1);
+    assert(isstruct(result) && isfield(result, 'pdus') && ~isempty(result.pdus));
+    defaultFreqPdus = radio.scanIq(crop, fs, 'FreqList', 0);
+    assert(any(strcmp({defaultFreqPdus.protocol}, 'TETRA')));
+    didError = false;
+    try
+        radio.scanIq(crop, fs, 'ProtocolNames', {'tetra'}, 'BlindSearch', true);
+    catch ME
+        didError = strcmp(ME.identifier, 'radio:scanIq:TetraBlindSearchUnsupported');
+    end
+    assert(didError);
     fprintf('TETRA sample decoded PDUs/events: %d\n', numel(pdus));
 end
 

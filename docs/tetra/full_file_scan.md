@@ -1,8 +1,17 @@
 # TETRA 全文件多窗口扫描
 
-本文描述当前新增的 TETRA-only 全文件扫描实验入口。它暂时不接入
-`scanner.m` 或 `radio.scanFile` 的统一分发，目的是先把单模式链路跑通、观察
-整段录音中的 DSB/DNB/STCH/TCH candidate 时序。
+本文描述当前 TETRA 全文件扫描入口。TETRA 已接入 `scanner.m` /
+`radio.scanFile` 的统一分发，但不走 DMR/P25/dPMR 的 48 kHz 窄带 4FSK
+链路，而是走独立的 72 kHz windowed-IQ 分支。
+
+核心复用边界是：
+
+```matlab
+result = tetra.scanIqWindows(iq, sampleRate, ...);
+```
+
+`tetra.scanFileWindows(file, ...)` 只负责读文件、识别采样率、调用
+`tetra.scanIqWindows`，并在需要时写诊断文件。
 
 ## 入口
 
@@ -18,6 +27,13 @@ run('examples/tetra/tetra_full_file_scan.m')
 result = tetra.scanFileWindows(file, ...
     'OutputDir', 'outputs/tetra_full_file_scan/interactive_latest', ...
     'ShowProgress', true);
+```
+
+统一 PDU 入口：
+
+```matlab
+pdus = radio.scanFile(file, 'ProtocolNames', {'tetra'});
+lines = radio.formatLines(pdus);
 ```
 
 返回的 `result` 主要字段：
@@ -44,7 +60,7 @@ windows.csv
 流程是：
 
 ```text
-IQ 文件 -> 识别采样率 -> 整段重采样到 72 kHz
+IQ 文件 / IQ 数组 -> 识别或传入采样率 -> 整段重采样到 72 kHz
 -> 1 ms 功率包络 -> 门限检测活动区
 -> 合并相隔很近的活动 run
 -> 按 6 s 窗口、1.25 s 重叠切片
@@ -86,12 +102,15 @@ fullScanMinWindowSec  = 0.250
 duration:        37.970 s
 scan windows:    7
 decoded windows: 7
-PDUs/events:     687
-DMAC-SYNC:       146
+PDUs/events:     686
+DMAC-SYNC:       145
 STCH:            51
 SCH/F:           0
 TCH candidates:  488
 sessions:        2
+confirmed bursts: 755
+DSB bursts:      170
+DNB bursts:      585
 ```
 
 两条 session 汇总：
@@ -109,7 +128,8 @@ SRC=3418531 DST=100 START=6.727s  END=34.762s DUR=28.036s RELEASE=DM-RELEASE
 `tetra.symbolDebug` 仍然用于图像分析和物理层调试，它默认只选择一个 active
 window，并生成各处理阶段图窗。
 
-`tetra.scanFileWindows` 不生成图，重点是全文件事件输出。它内部每个窗口调用：
+`tetra.scanFileWindows` 不生成图，重点是全文件事件输出。统一入口最终也会进入
+`tetra.scanIqWindows`。它内部每个窗口调用：
 
 ```matlab
 tetra.decodeIqWindow(...)

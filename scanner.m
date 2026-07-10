@@ -3,7 +3,8 @@
 
 TARGET_FILE = '/home/lzkj/lzkj_workspace/python_docs/DMR_demo/data/synthesized_wideband_2.5MHz.rawiq';
 
-% Use {} to try all enabled protocols, or one/more of: {'dmr'}, {'p25'}, {'dpmr'}, {'tetra'}.
+% Use {} for scan-mode defaults, or one/more of: {'dmr'}, {'p25'}, {'dpmr'}, {'tetra'}.
+% Defaults: BlindSearch scans DMR/P25/dPMR; FREQ_LIST also includes TETRA.
 PROTOCOLS = {};
 
 % Leave SAMPLE_RATE empty to infer it from names like dmr_1_78125.rawiq.

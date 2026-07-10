@@ -207,7 +207,7 @@ DCC contexts:          38
 MAC blocks:            28
 STCH decoded:          6
 SCH/F decoded:         0
-radio.scanFile PDUs:   68 TETRA events/sessions
+radio.scanFile PDUs:   686 full-file TETRA events/sessions
 timing assigned:       62
 frequency correction:  38 DSB fields, median abs error 59.1 Hz
 ```
@@ -230,7 +230,8 @@ DCC: generated from MNI low 6 bits plus source address for each valid DSB
 normal_2 STCH: decoded DM-INFO and DM-RELEASE examples
 normal_1 SCH/F: attempted; current sample normal_1 blocks fail SCH/F checks and
 therefore remain TCH candidates
-unified output: radio.scanFile(..., 'ProtocolNames', {'tetra'}) prints
+unified output: radio.scanFile(..., 'ProtocolNames', {'tetra'}) now uses the
+72 kHz TETRA windowed-IQ branch and prints
 TETRA_DMAC_SYNC, TETRA_STCH, TETRA_TCH_CANDIDATE, and TETRA_SESSION records
 ```
 
