@@ -22,6 +22,8 @@ syntheticNid(1:16) = [intToBits(hex2dec('293'), 12), intToBits(5, 4)];
 synthetic = p25.decodeNid(syntheticNid);
 assert(~synthetic.valid_bch && ~synthetic.corrected);
 
+tests.runNxdn96();
+
 cfg = tetra.config();
 seqs = tetra.trainingSequences();
 defs = tetra.dmoBurstDefinitions(seqs, cfg);

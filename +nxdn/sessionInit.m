@@ -1,0 +1,6 @@
+function session = sessionInit()
+%SESSIONINIT Initialize NXDN signalling-only call state.
+session = struct('active', false, 'src', 0, 'dst', 0, 'call_type', '', ...
+    'ran', [], 'first_sample', [], 'last_sample', [], 'message_count', 0, ...
+    'alias_parts', {cell(1, 0)}, 'alias_total', 0, 'alias', '');
+end

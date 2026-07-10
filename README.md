@@ -29,6 +29,7 @@ scanner.m
 dmr_cli.m
 p25_cli.m
 dpmr_cli.m
+nxdn96_cli.m
 open_radio_analyzer.m
 ```
 
@@ -74,6 +75,18 @@ y = p25.frontend(iq, 48000);
 y = dpmr.frontend(iq, 48000);
 ```
 
+NXDN96 is currently available as a standalone, data-only decoder and is
+intentionally not registered in the unified scanner:
+
+```matlab
+iq = common.readRawIq('signal_data/nxdn96_1_78125.rawiq');
+[pdus, report] = nxdn.decodeIq(iq, 78125, nxdn.config());
+```
+
+Open `nxdn96_cli.m` for the click-to-run entry. It decodes LICH, SACCH,
+FACCH1, CAC, UDCH/FACCH2 and Layer-3 data; VCH voice payload is not decoded or
+emitted as a data PDU.
+
 Native protocol decode is implemented behind each protocol package. Python
 fallback remains useful when comparing behavior while adding new protocols.
 
@@ -100,6 +113,7 @@ The Python project root is resolved from:
 +dmr/         DMR config/frontend/formatting adapter
 +p25/         P25 config/frontend/formatting adapter
 +dpmr/        dPMR config/frontend/formatting adapter
++nxdn/        standalone NXDN96 non-voice decoder (not scanner-registered)
 +pybackend/   Python compatibility backend
 +viz/         MATLAB visualization workflow
 +tests/       MATLAB regression/smoke tests

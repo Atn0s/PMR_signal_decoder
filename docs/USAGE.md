@@ -10,6 +10,7 @@ configuration block at the top, and click Run.
 - `p25_cli.m`: P25-only scanner.
 - `dpmr_cli.m`: dPMR-only scanner.
 - `tetra_cli.m`: TETRA DMO control scanner.
+- `nxdn96_cli.m`: standalone NXDN96 data-PDU decoder; it does not use scanner.
 - `examples/tetra/tetra_full_file_scan.m`: TETRA-only full-file multi-window scan.
 - `open_radio_analyzer.m`: opens the interactive analyzer UI.
 
@@ -53,6 +54,23 @@ result = viz.analyzeFile('/path/to/signal.rawiq', ...
     'ProtocolNames', {'dmr'}, ...
     'CreateFigure', true);
 ```
+
+Standalone NXDN96 use:
+
+```matlab
+iq = common.readRawIq('signal_data/nxdn96_1_78125.rawiq');
+[pdus, report] = nxdn.decodeIq(iq, 78125, nxdn.config());
+displayPdus = nxdn.deduplicatePdus(pdus);
+for k = 1:numel(displayPdus)
+    fprintf('%s\n', nxdn.formatPdu(displayPdus(k)));
+end
+```
+
+The NXDN96 decoder currently handles non-voice data and control channels. It
+records whether VCH is present but does not decode AMBE audio or include VCH
+payload in a data PDU. `nxdn.spec` is a dormant compatibility adapter only;
+NXDN is not present in `radio.protocolRegistry` and does not change scanner or
+blind-search behavior.
 
 TETRA is wired through `radio.scanFile` / `scanner.m` as a separate 72 kHz
 windowed-IQ branch. Default wideband blind search still scans only the narrowband
@@ -100,6 +118,12 @@ radio.writeJson(pdus, 'outputs/result_with_bits.json', 'IncludeRawBits', true);
 
 ```bash
 /home/lzkj/matlab/bin/matlab -batch "cd('/home/lzkj/lzkj_workspace/matlab_docs'); startup; tests.runAll"
+```
+
+Run only NXDN96 unit and local-sample tests:
+
+```bash
+/home/lzkj/matlab/bin/matlab -batch "cd('/home/lzkj/lzkj_workspace/matlab_docs'); startup; tests.runNxdn96"
 ```
 
 Run the smoke tests plus Python golden-vector comparison:

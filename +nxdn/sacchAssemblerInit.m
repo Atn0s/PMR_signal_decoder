@@ -1,0 +1,6 @@
+function state = sacchAssemblerInit()
+%SACCHASSEMBLERINIT Initialize NXDN SACCH superframe assembly state.
+state = struct('active', false, 'next_part', 1, ...
+    'fragments', false(4, 18), 'ran', [], 'direction', '', ...
+    'rf_channel_type', '', 'first_sample', [], 'last_sample', []);
+end

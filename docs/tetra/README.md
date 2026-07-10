@@ -4,6 +4,7 @@
 
 ```text
 current_decode_workflow.md  当前 TETRA 解码工作流程，重点说明 DMAC-SYNC、DCC、STCH
+dmo_bkn_decode.md          TETRA DMO BKN1/BKN2 内容、bit 映射和 MAC PDU 解析参考
 full_file_scan.md          TETRA-only 全文件多窗口扫描实验入口和当前样本结果
 link_layer_decode_plan.md   TETRA DMO 链路层完整解码方案
 phase1_status.md           TETRA 第一阶段状态、样本结果和当前边界
