@@ -60,11 +60,11 @@ run('examples/tetra/tetra_full_file_scan.m')
 统一入口的当前调度规则：
 
 ```text
-DMR/P25/dPMR -> 48 kHz narrowband 4FSK 分支
+DMR/P25/dPMR/NXDN -> 48 kHz narrowband 4FSK 分支
 TETRA        -> 72 kHz windowed-IQ 分支
 
-BlindSearch=true 且未指定协议      -> 默认只扫 DMR/P25/dPMR
-FreqList 非空且未指定协议          -> DMR/P25/dPMR + TETRA 都尝试
+BlindSearch=true 且未指定协议      -> 默认扫描 DMR/P25/dPMR/NXDN
+FreqList 非空且未指定协议          -> DMR/P25/dPMR/NXDN + TETRA 都尝试
 显式指定 TETRA + BlindSearch=true + 无 FreqList
                                   -> 报错，宽带 TETRA 盲扫暂未实现
 ```

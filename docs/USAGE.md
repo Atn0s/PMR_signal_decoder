@@ -5,12 +5,12 @@ configuration block at the top, and click Run.
 
 ## Script Entrypoints
 
-- `scanner.m`: unified DMR/P25/dPMR/TETRA scanner.
+- `scanner.m`: unified DMR/P25/dPMR/NXDN/TETRA scanner.
 - `dmr_cli.m`: DMR-only scanner.
 - `p25_cli.m`: P25-only scanner.
 - `dpmr_cli.m`: dPMR-only scanner.
 - `tetra_cli.m`: TETRA DMO control scanner.
-- `nxdn96_cli.m`: standalone NXDN96 data-PDU decoder; it does not use scanner.
+- `nxdn96_cli.m`: standalone NXDN96 data-PDU diagnostic decoder.
 - `examples/tetra/tetra_full_file_scan.m`: TETRA-only full-file multi-window scan.
 - `open_radio_analyzer.m`: opens the interactive analyzer UI.
 
@@ -68,23 +68,24 @@ end
 
 The NXDN96 decoder currently handles non-voice data and control channels. It
 records whether VCH is present but does not decode AMBE audio or include VCH
-payload in a data PDU. `nxdn.spec` is a dormant compatibility adapter only;
-NXDN is not present in `radio.protocolRegistry` and does not change scanner or
-blind-search behavior.
+payload in a data PDU. `nxdn.spec` is registered in `radio.protocolRegistry`;
+explicit, centered/default, known-frequency and blind-search scanner paths all
+support NXDN through the native MATLAB backend.
 
 TETRA is wired through `radio.scanFile` / `scanner.m` as a separate 72 kHz
 windowed-IQ branch. Default wideband blind search still scans only the narrowband
-DMR/P25/dPMR branch; pass `ProtocolNames`, or pass `FreqList` for explicit
+DMR/P25/dPMR/NXDN branch; pass `ProtocolNames`, or pass `FreqList` for explicit
 candidate offsets when TETRA should be considered.
 
 Current dispatch rules:
 
 ```text
-BlindSearch=true, no ProtocolNames     -> DMR/P25/dPMR only
+BlindSearch=true, no ProtocolNames     -> DMR/P25/dPMR/NXDN
 FreqList set, BlindSearch=false,
-no ProtocolNames                       -> DMR/P25/dPMR + TETRA
+no ProtocolNames                       -> DMR/P25/dPMR/NXDN + TETRA
 FreqList set, BlindSearch=true,
-no ProtocolNames                       -> DMR/P25/dPMR only (current resolver precedence)
+no ProtocolNames                       -> DMR/P25/dPMR/NXDN (current resolver precedence)
+ProtocolNames contains 'nxdn'          -> run native MATLAB NXDN96 decoder
 ProtocolNames contains 'tetra'         -> run TETRA unless unsupported
 ProtocolNames contains 'tetra' and BlindSearch=true without FreqList
                                       -> error; wideband TETRA blind scan is not implemented

@@ -1,4 +1,4 @@
-# DMR/P25/dPMR MATLAB Migration
+# MATLAB Multi-Protocol Radio Decoder
 
 This directory is a staged MATLAB migration of the existing Python radio
 decoder project at:
@@ -8,7 +8,7 @@ decoder project at:
 ```
 
 The current default path is native MATLAB for IQ loading, sample-rate detection,
-PSD candidate search, DDC/resampling, FSK frontends, and DMR/P25/dPMR metadata
+PSD candidate search, DDC/resampling, FSK frontends, and DMR/P25/dPMR/NXDN metadata
 decode. The proven Python decoders remain available as an explicit fallback.
 
 ## Quick Start
@@ -75,12 +75,15 @@ y = p25.frontend(iq, 48000);
 y = dpmr.frontend(iq, 48000);
 ```
 
-NXDN96 is currently available as a standalone, data-only decoder and is
-intentionally not registered in the unified scanner:
+NXDN96 is available through both its standalone data-only decoder and the
+unified scanner:
 
 ```matlab
 iq = common.readRawIq('signal_data/nxdn96_1_78125.rawiq');
 [pdus, report] = nxdn.decodeIq(iq, 78125, nxdn.config());
+
+pdus = radio.scanFile('signal_data/nxdn96_1_78125.rawiq', ...
+    'ProtocolNames', {'nxdn'});
 ```
 
 Open `nxdn96_cli.m` for the click-to-run entry. It decodes LICH, SACCH,
@@ -113,7 +116,7 @@ The Python project root is resolved from:
 +dmr/         DMR config/frontend/formatting adapter
 +p25/         P25 config/frontend/formatting adapter
 +dpmr/        dPMR config/frontend/formatting adapter
-+nxdn/        standalone NXDN96 non-voice decoder (not scanner-registered)
++nxdn/        NXDN96 non-voice decoder and scanner adapter
 +pybackend/   Python compatibility backend
 +viz/         MATLAB visualization workflow
 +tests/       MATLAB regression/smoke tests

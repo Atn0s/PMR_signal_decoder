@@ -24,10 +24,13 @@ Implemented for the offline path.
 
 ## Stage 3: Protocol package boundary
 
-Implemented as native MATLAB decoders for the current DMR/P25/dPMR metadata
+Implemented as native MATLAB decoders for the current DMR/P25/dPMR/NXDN metadata
 surface.
 
-- `+dmr`, `+p25`, and `+dpmr` expose config, frontend, decode, postprocess, dedup, and formatter functions.
+- `+dmr`, `+p25`, `+dpmr`, and `+nxdn` expose config, frontend, decode,
+  postprocess, dedup, and formatter functions.
+- NXDN96 supports explicit, centered/default, known-frequency and blind-search
+  native MATLAB dispatch. The Python compatibility backend does not support NXDN.
 - Current golden samples run with `PipelineBackend='matlab'` and `DecoderBackend='matlab'`.
 - Python fallback remains available for cross-checking and future protocol work.
 

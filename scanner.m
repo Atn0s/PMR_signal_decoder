@@ -1,10 +1,10 @@
-%% Unified DMR/P25/dPMR/TETRA scanner entry
+%% Unified DMR/P25/dPMR/NXDN/TETRA scanner entry
 % Edit the configuration block, then click Run in MATLAB.
 
 TARGET_FILE = '/home/lzkj/lzkj_workspace/python_docs/DMR_demo/data/synthesized_wideband_2.5MHz.rawiq';
 
-% Use {} for scan-mode defaults, or one/more of: {'dmr'}, {'p25'}, {'dpmr'}, {'tetra'}.
-% Defaults: BlindSearch scans DMR/P25/dPMR; FREQ_LIST also includes TETRA.
+% Use {} for scan-mode defaults, or: {'dmr'}, {'p25'}, {'dpmr'}, {'nxdn'}, {'tetra'}.
+% Defaults: centered/FREQ_LIST/BlindSearch include NXDN; FREQ_LIST also includes TETRA.
 PROTOCOLS = {};
 
 % Leave SAMPLE_RATE empty to infer it from names like dmr_1_78125.rawiq.

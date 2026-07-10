@@ -1,5 +1,5 @@
 function spec = spec()
-%SPEC Dormant ProtocolSpec adapter for later scanner integration.
+%SPEC NXDN ProtocolSpec adapter for unified scanner integration.
 cfg = nxdn.config();
 spec = struct('name', 'NXDN', 'aliases', {{'nxdn', 'nxdn96'}}, ...
     'config', cfg, 'frontendKey', 'nxdn_4fsk', ...

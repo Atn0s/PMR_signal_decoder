@@ -1,6 +1,6 @@
 # NXDN96 独立解码实现方案
 
-状态：已实现并通过独立测试及全项目回归，尚未接入 scanner。
+状态：已实现、通过独立测试及全项目回归，并已接入统一 scanner。
 
 当前本地样本基线：
 
@@ -29,7 +29,8 @@
 
 明确不属于本阶段的内容：
 
-- 不修改 `radio.protocolRegistry`、`scanner.m` 或默认扫描协议；
+- 独立开发阶段不修改 `radio.protocolRegistry`、`scanner.m` 或默认扫描协议；该约束
+  已在独立基线提交后解除，并通过后续分阶段接入完成统一注册；
 - 不进行多制式识别、宽带盲扫或并行调度；
 - 不支持 NXDN48（6.25 kHz、4800 bit/s）；
 - 不支持 Type-D 专用帧结构；
@@ -628,14 +629,13 @@ scanner，现有默认协议集合也必须保持不变。
 
 ### 后续独立阶段
 
-完成上述验收后，才能另行讨论：
+独立解码验收完成后，统一 scanner 注册、默认串行和 blind search 已按阶段完成。
+后续独立阶段包括：
 
-1. 注册到 scanner；
-2. 加入串行 blind search；
-3. 加入已知频点多制式并行 probe；
-4. 支持 NXDN48；
-5. 支持 Type-D；
-6. 提取或解码语音。
+1. 加入已知频点多制式并行 probe；
+2. 支持 NXDN48；
+3. 支持 Type-D；
+4. 提取或解码语音。
 
 ## 13. 完成标准
 
@@ -649,6 +649,7 @@ scanner，现有默认协议集合也必须保持不变。
 - 未知但 CRC 有效的消息得到保留，不被误报为失败；
 - VCH 只产生诊断元数据，不解析、不保存为数据 payload；
 - `tests.runAll()` 和 `tests.runNxdn96()` 均通过；
-- `radio.protocolRegistry`、scanner 和默认扫描行为未改变；
+- 独立基线提交保持 `radio.protocolRegistry` 和 scanner 不变；后续接入提交另行验证
+  显式、默认串行和 blind-search 行为；
 - 大样本继续被忽略，不进入 Git；
 - 文档、CLI 输出和 PDU 字段与代码一致。

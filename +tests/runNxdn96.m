@@ -4,7 +4,23 @@ root = fileparts(fileparts(mfilename('fullpath')));
 addpath(root);
 cfg = nxdn.config();
 c = nxdn.constants();
-assert(~any(strcmp({radio.protocolRegistry().name}, 'NXDN')));
+assert(any(strcmp({radio.protocolRegistry().name}, 'NXDN')));
+assert(isequal(radio.normalizeProtocolNames({'nxdn96'}), {'NXDN'}));
+[defaultBaseband, explicitDefault] = radio.resolveScanProtocols({});
+assert(~explicitDefault && any(strcmp(defaultBaseband, 'NXDN')));
+[defaultFreq, explicitDefault] = radio.resolveScanProtocols({}, 'FreqList', 0);
+assert(~explicitDefault && any(strcmp(defaultFreq, 'NXDN')));
+[defaultBlind, explicitDefault] = radio.resolveScanProtocols({}, 'BlindSearch', true);
+assert(~explicitDefault && any(strcmp(defaultBlind, 'NXDN')));
+didRejectPython = false;
+try
+    radio.decodeNarrowband(complex(zeros(1024, 1)), {'NXDN'}, 48000, ...
+        'DecoderBackend', 'python');
+catch ME
+    didRejectPython = strcmp(ME.identifier, ...
+        'radio:decodeNarrowband:NxdnPythonUnsupported');
+end
+assert(didRejectPython);
 
 assert(strcmp(c.fswHex, 'CDF59'));
 assert(isequal(char(nxdn.pn9Sequence(8).' + '0'), '00100111'));
@@ -91,6 +107,36 @@ for sampleIndex = 1:2
     end
     iq = common.readRawIq(path);
     [pdus, decodedReport] = nxdn.decodeIq(iq, 78125, cfg);
+    scannerRaw = radio.scanFile(path, 'ProtocolNames', {'nxdn'}, ...
+        'PipelineBackend', 'matlab', 'DecoderBackend', 'matlab', ...
+        'Deduplicate', false);
+    assert(numel(scannerRaw) == numel(pdus));
+    assert(isequal(sort(pduSignatures(scannerRaw)), sort(pduSignatures(pdus))));
+    scannerDedup = radio.deduplicatePdus(scannerRaw);
+    standaloneDedup = nxdn.deduplicatePdus(pdus);
+    assert(isequal(sort(pduSignatures(scannerDedup)), ...
+        sort(pduSignatures(standaloneDedup))));
+    lines = radio.formatLines(scannerDedup);
+    assert(all(contains(lines, 'PROTO=NXDN')));
+    if sampleIndex == 1
+        defaultRaw = radio.scanFile(path, ...
+            'PipelineBackend', 'matlab', 'DecoderBackend', 'matlab', ...
+            'Deduplicate', false);
+        assert(~isempty(defaultRaw));
+        assert(all(strcmp({defaultRaw.protocol}, 'NXDN')));
+        assert(isequal(sort(pduSignatures(defaultRaw)), ...
+            sort(pduSignatures(scannerRaw))));
+        crop = iq(round(1.2 * 78125):round(1.7 * 78125));
+        knownFreqPdus = radio.scanIq(crop, 78125, 'FreqList', 0, ...
+            'DecoderBackend', 'matlab');
+        assert(~isempty(knownFreqPdus));
+        assert(all(strcmp({knownFreqPdus.protocol}, 'NXDN')));
+        blindPdus = radio.scanIq(crop, 78125, 'BlindSearch', true, ...
+            'DecoderBackend', 'matlab');
+        assert(~isempty(blindPdus));
+        assert(all(strcmp({blindPdus.protocol}, 'NXDN')));
+        assert(any(strcmp({blindPdus.type}, 'NXDN_VCALL')));
+    end
     vcalls = pdus(strcmp({pdus.type}, 'NXDN_VCALL'));
     calls = pdus(strcmp({pdus.type}, 'NXDN_CALL'));
     assert(~isempty(vcalls) && all([vcalls.src] == 1203));
@@ -107,7 +153,7 @@ for sampleIndex = 1:2
         displayPdus = nxdn.deduplicatePdus(pdus);
         assert(numel(displayPdus) >= 10 && numel(displayPdus) < numel(pdus));
         jsonPath = [tempname '.json'];
-        cleaner = onCleanup(@() deleteIfPresent(jsonPath)); %#ok<NASGU>
+        cleaner = onCleanup(@() deleteIfPresent(jsonPath));
         radio.writeJson(displayPdus, jsonPath);
         assert(~contains(fileread(jsonPath), 'raw_bits'));
         radio.writeJson(displayPdus, jsonPath, 'IncludeRawBits', true);
@@ -214,4 +260,18 @@ end
 
 function deleteIfPresent(path)
 if exist(path, 'file') == 2, delete(path); end
+end
+
+function signatures = pduSignatures(pdus)
+signatures = cell(numel(pdus), 1);
+for k = 1:numel(pdus)
+    signatures{k} = jsonencode({ ...
+        radio.getField(pdus(k), 'protocol', ''), ...
+        radio.getField(pdus(k), 'type', ''), ...
+        radio.getField(pdus(k), 'src', 0), ...
+        radio.getField(pdus(k), 'dst', 0), ...
+        radio.getNestedField(pdus(k), 'extra.ran', []), ...
+        radio.getNestedField(pdus(k), 'extra.payload_hex', ''), ...
+        radio.getNestedField(pdus(k), 'extra.start_sample', [])});
+end
 end

@@ -5,16 +5,20 @@ addpath(root);
 
 assert(common.detectSampleRate('data/dmr_1_78125.rawiq') == 78125);
 assert(common.detectSampleRate('data/synthesized_wideband_2.5MHz.rawiq') == 2500000);
-assert(isequal(radio.normalizeProtocolNames({'dmr', 'P25', 'dpmr', 'tetra'}), {'DMR', 'P25', 'dPMR', 'TETRA'}));
+assert(isequal(radio.normalizeProtocolNames( ...
+    {'dmr', 'P25', 'dpmr', 'nxdn', 'tetra'}), ...
+    {'DMR', 'P25', 'dPMR', 'NXDN', 'TETRA'}));
 specs = radio.protocolRegistry();
 tetraSpec = specs(strcmp({specs.name}, 'TETRA'));
 assert(strcmp(tetraSpec.scanMode, 'windowed_iq'));
 assert(tetraSpec.targetSampleRateHz == 72000);
 assert(~tetraSpec.supportsBlindSearch);
 [defaultBlind, explicitDefaultBlind] = radio.resolveScanProtocols({}, 'BlindSearch', true);
-assert(~explicitDefaultBlind && ~any(strcmp(defaultBlind, 'TETRA')));
+assert(~explicitDefaultBlind && any(strcmp(defaultBlind, 'NXDN')) && ...
+    ~any(strcmp(defaultBlind, 'TETRA')));
 [defaultFreq, explicitDefaultFreq] = radio.resolveScanProtocols({}, 'FreqList', 0);
-assert(~explicitDefaultFreq && any(strcmp(defaultFreq, 'TETRA')));
+assert(~explicitDefaultFreq && any(strcmp(defaultFreq, 'NXDN')) && ...
+    any(strcmp(defaultFreq, 'TETRA')));
 assert(numel(radio.deduplicatePdus(makeP25SemanticDuplicates())) == 1);
 assert(numel(radio.deduplicatePdus(makeDpmrSemanticDuplicates())) == 1);
 syntheticNid = false(64, 1);
@@ -75,6 +79,8 @@ if exist(sample, 'file') == 2
         'Deduplicate', false);
     assert(isstruct(pdus));
     assert(numel(rawPdus) >= numel(pdus));
+    assert(isempty(radio.scanFile(sample, 'ProtocolNames', {'nxdn'}, ...
+        'PipelineBackend', 'matlab', 'DecoderBackend', 'matlab')));
     tmpJson = [tempname, '.json'];
     radio.writeJson(pdus, tmpJson);
     assert(~contains(fileread(tmpJson), 'raw_bits'));
@@ -89,6 +95,8 @@ if exist(p25Sample, 'file') == 2
     pdus = radio.scanFile(p25Sample, 'ProtocolNames', {'p25'}, ...
         'PipelineBackend', 'matlab', 'DecoderBackend', 'matlab');
     assert(isstruct(pdus));
+    assert(isempty(radio.scanFile(p25Sample, 'ProtocolNames', {'nxdn'}, ...
+        'PipelineBackend', 'matlab', 'DecoderBackend', 'matlab')));
     fprintf('P25 sample decoded PDUs: %d\n', numel(pdus));
 end
 
@@ -97,6 +105,8 @@ if exist(dpmrSample, 'file') == 2
     pdus = radio.scanFile(dpmrSample, 'ProtocolNames', {'dpmr'}, ...
         'PipelineBackend', 'matlab', 'DecoderBackend', 'matlab');
     assert(isstruct(pdus));
+    assert(isempty(radio.scanFile(dpmrSample, 'ProtocolNames', {'nxdn'}, ...
+        'PipelineBackend', 'matlab', 'DecoderBackend', 'matlab')));
     fprintf('dPMR sample decoded PDUs: %d\n', numel(pdus));
 end
 
