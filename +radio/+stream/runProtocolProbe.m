@@ -43,7 +43,7 @@ end
 timer = tic;
 try
     [pdus, diagnostics, frequencyOffsetHz, timingState] = ...
-        decodeProbeWindow(state.protocol, snapshot, probe);
+        radio.stream.decodeProtocolWindow(state.protocol, snapshot);
     verdict = radio.stream.evaluateProbeEvidence( ...
         state.protocol, pdus, diagnostics);
     status = verdict.status;
@@ -79,52 +79,4 @@ if any(strcmp(result.status, {'no_evidence', 'candidate', 'error'}))
     state.nextWindowSec = min(probe.maxWindowSec, ...
         max(probe.initialWindowSec, attemptedSec * probe.windowGrowthFactor));
 end
-end
-
-function [pdus, diagnostics, frequencyOffsetHz, timingState] = ...
-        decodeProbeWindow(protocol, snapshot, probe)
-diagnostics = struct();
-frequencyOffsetHz = 0;
-timingState = struct();
-
-if strcmp(protocol, 'TETRA')
-    context = struct('activeStartSec', 0, ...
-        'activeEndSec', numel(snapshot.iq) / snapshot.sampleRateHz);
-    [pdus, diagnostics] = tetra.decodeIqWindow( ...
-        snapshot.iq, snapshot.sampleRateHz, tetra.config(), context);
-    frequencyOffsetHz = radio.getNestedField( ...
-        diagnostics, 'coarseFrequencyOffsetHz', 0) + ...
-        radio.getNestedField(diagnostics, 'residualCorrectionHz', 0);
-    timingState = struct( ...
-        'phaseSamples', radio.getNestedField(diagnostics, 'timingPhaseSamples', NaN), ...
-        'errorRad', radio.getNestedField(diagnostics, 'timingErrorRad', NaN), ...
-        'decisionVariant', radio.getNestedField(diagnostics, 'decisionVariant', ''));
-    return;
-end
-
-specs = radio.protocolRegistry();
-idx = find(strcmp({specs.name}, protocol), 1);
-if isempty(idx)
-    error('radio:stream:runProtocolProbe:UnknownProtocol', ...
-        'No decoder is registered for protocol %s.', protocol);
-end
-spec = specs(idx);
-if abs(snapshot.sampleRateHz - probe.targetSampleRateHz) < 1e-6
-    iq = snapshot.iq;
-else
-    iq = common.resampleTo(snapshot.iq, ...
-        snapshot.sampleRateHz, probe.targetSampleRateHz);
-end
-
-if strcmp(protocol, 'NXDN')
-    [y, frontendInfo] = spec.frontendFcn(iq, probe.targetSampleRateHz, spec.config);
-    [pdus, diagnostics] = spec.decodeFcn(y, spec.config);
-    frequencyOffsetHz = frontendInfo.coarseFrequencyOffsetHz + ...
-        frontendInfo.residualFrequencyOffsetHz;
-    timingState = frontendInfo;
-else
-    y = spec.frontendFcn(iq, probe.targetSampleRateHz, spec.config);
-    pdus = spec.decodeFcn(y, spec.config);
-end
-pdus = radio.normalizePdus(pdus);
 end
