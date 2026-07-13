@@ -1,0 +1,127 @@
+function [controller, output] = channelControllerFeed(controller, chunk)
+%CHANNELCONTROLLERFEED Buffer IQ and advance the phase-1 channel FSM.
+% Phase 1 intentionally stops at CLASSIFYING; protocol probes are phase 2.
+radio.stream.validateIqChunk(chunk);
+if chunk.sampleRateHz ~= controller.sampleRateHz
+    error('radio:stream:channelControllerFeed:SampleRate', ...
+        'Chunk and channel controller sample rates differ.');
+end
+if ~isequal(chunk.channelId, controller.channelId)
+    error('radio:stream:channelControllerFeed:ChannelId', ...
+        'Chunk and channel controller channel IDs differ.');
+end
+
+[controller.ringBuffer, bufferEvent] = ...
+    radio.stream.ringBufferPush(controller.ringBuffer, chunk);
+events = emptyEvents();
+if bufferEvent.reset
+    previousState = controller.state;
+    if ~isempty(controller.currentEpoch)
+        controller.currentEpoch.endSample = chunk.sourceSampleStart;
+        controller.currentEpoch.state = 'CLOSED';
+        controller.currentEpoch.status = 'closed';
+        controller.currentEpoch.closeReason = 'input_discontinuity';
+        controller.lastClosedEpoch = controller.currentEpoch;
+        controller.currentEpoch = [];
+    end
+    controller.generation = controller.generation + uint64(1);
+    controller.state = 'NO_SIGNAL';
+    controller.activityDetector = radio.stream.activityDetectorInit( ...
+        controller.sampleRateHz, 'Config', controller.config.activity);
+    events(end+1) = makeEvent('DISCONTINUITY', previousState, ...
+        'NO_SIGNAL', chunk.sourceSampleStart, 'input_discontinuity', uint64(0));
+end
+
+[controller.activityDetector, activity] = ...
+    radio.stream.activityDetectorFeed(controller.activityDetector, chunk);
+
+switch controller.state
+    case 'NO_SIGNAL'
+        if strcmp(activity.phase, 'pending_on') || activity.isActive
+            [controller, events] = transition(controller, events, ...
+                'ACTIVITY_PENDING', chunk.sourceSampleEnd, ...
+                'activity_above_on_threshold', uint64(0));
+        end
+        if activity.isActive
+            [controller, events] = beginClassification(controller, events, ...
+                activity.candidateStartSample, chunk.sourceSampleEnd);
+        end
+
+    case 'ACTIVITY_PENDING'
+        if activity.isActive
+            [controller, events] = beginClassification(controller, events, ...
+                activity.candidateStartSample, chunk.sourceSampleEnd);
+        elseif strcmp(activity.phase, 'inactive')
+            [controller, events] = transition(controller, events, ...
+                'NO_SIGNAL', chunk.sourceSampleEnd, ...
+                'activity_too_short', uint64(0));
+        end
+
+    case 'CLASSIFYING'
+        if activity.ended || (~activity.isActive && strcmp(activity.phase, 'inactive'))
+            epochId = controller.currentEpoch.epochId;
+            controller.currentEpoch.endSample = chunk.sourceSampleEnd;
+            controller.currentEpoch.state = 'CLOSED';
+            controller.currentEpoch.status = 'closed';
+            controller.currentEpoch.closeReason = 'signal_ended_before_confirmation';
+            controller.lastClosedEpoch = controller.currentEpoch;
+            controller.currentEpoch = [];
+            controller.generation = controller.generation + uint64(1);
+            [controller, events] = transition(controller, events, ...
+                'NO_SIGNAL', chunk.sourceSampleEnd, ...
+                'signal_ended_before_confirmation', epochId);
+        end
+
+    otherwise
+        error('radio:stream:channelControllerFeed:State', ...
+            'Phase-1 controller cannot handle state: %s', controller.state);
+end
+
+controller.lastSampleEnd = chunk.sourceSampleEnd;
+output = struct( ...
+    'state', controller.state, ...
+    'activity', activity, ...
+    'bufferEvent', bufferEvent, ...
+    'events', events, ...
+    'epoch', controller.currentEpoch);
+end
+
+function [controller, events] = beginClassification( ...
+        controller, events, candidateStartSample, eventSample)
+controller.generation = controller.generation + uint64(1);
+epochId = controller.nextEpochId;
+controller.nextEpochId = controller.nextEpochId + uint64(1);
+controller.currentEpoch = radio.stream.newEpoch( ...
+    controller.channelId, epochId, controller.generation, candidateStartSample);
+[controller, events] = transition(controller, events, ...
+    'CLASSIFYING', eventSample, 'activity_confirmed', epochId);
+end
+
+function [controller, events] = transition( ...
+        controller, events, newState, sample, reason, epochId)
+oldState = controller.state;
+controller.state = newState;
+controller.transitionCount = controller.transitionCount + uint64(1);
+events(end+1) = makeEvent('STATE_TRANSITION', oldState, newState, ...
+    sample, reason, epochId);
+end
+
+function event = makeEvent(type, fromState, toState, sample, reason, epochId)
+event = struct( ...
+    'type', type, ...
+    'fromState', fromState, ...
+    'toState', toState, ...
+    'sample', uint64(sample), ...
+    'reason', reason, ...
+    'epochId', uint64(epochId));
+end
+
+function events = emptyEvents()
+events = struct( ...
+    'type', {}, ...
+    'fromState', {}, ...
+    'toState', {}, ...
+    'sample', {}, ...
+    'reason', {}, ...
+    'epochId', {});
+end
