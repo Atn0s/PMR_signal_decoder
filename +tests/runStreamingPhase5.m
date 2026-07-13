@@ -79,10 +79,17 @@ assert(coordinator.lastCatchup.catchupStartSample == uint64(0));
 assert(coordinator.lastCatchup.catchupEndSample == uint64(300));
 assert(coordinator.lastCatchup.caughtUpToLiveEdge);
 
+[coordinator, output] = radio.stream.raceCoordinatorFeed( ...
+    coordinator, radio.stream.makeIqChunk( ...
+        signal, 1000, 300, 'SequenceNumber', 3));
+assert(strcmp(output.state, 'LOCKED'));
+assert(~isempty(output.decoder));
+assert(coordinator.decoderState.lastProcessedEndSample == uint64(400));
+
 noise = complex(1e-3 .* ones(100, 1));
 [~, output] = radio.stream.raceCoordinatorFeed( ...
     coordinator, radio.stream.makeIqChunk( ...
-        noise, 1000, 300, 'SequenceNumber', 3));
+        noise, 1000, 400, 'SequenceNumber', 4));
 assert(strcmp(output.state, 'NO_SIGNAL'));
 assert(isempty(output.selectedProtocol));
 end
