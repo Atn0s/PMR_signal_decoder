@@ -4,6 +4,8 @@ cfg = struct();
 cfg.chunkDurationSec = 0.100;
 cfg.ringBufferSec = 8.0;
 cfg.preTriggerSec = 0.5;
+cfg.lockedSuspectWindows = 3;
+cfg.lockedLostWindows = 6;
 
 cfg.activity = struct();
 cfg.activity.initialNoiseFloorDb = -60.0;

@@ -55,7 +55,9 @@ elseif strcmp(verdict.status, 'error')
     state.status = 'error';
 else
     state.consecutiveNoEvidence = state.consecutiveNoEvidence + 1;
-    if state.consecutiveNoEvidence >= 3
+    if state.consecutiveNoEvidence >= state.lostWindows
+        state.status = 'lost';
+    elseif state.consecutiveNoEvidence >= state.suspectWindows
         state.status = 'suspect';
     else
         state.status = 'no_evidence';

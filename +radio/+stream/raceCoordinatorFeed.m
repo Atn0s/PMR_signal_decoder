@@ -68,7 +68,8 @@ if ~isempty(coordinator.activeRace)
     end
 end
 
-if strcmp(coordinator.state, 'CLASSIFYING') && isempty(coordinator.activeRace)
+if any(strcmp(coordinator.state, {'CLASSIFYING', 'RECLASSIFYING'})) && ...
+        isempty(coordinator.activeRace)
     buffer = coordinator.channelController.ringBuffer;
     snapshotStart = max(buffer.startSample, epoch.candidateStartSample);
     if snapshotStart < buffer.endSample
@@ -102,11 +103,14 @@ if strcmp(coordinator.state, 'CATCHING_UP') && ...
     end
 end
 
-if strcmp(coordinator.state, 'LOCKED') && ~isempty(coordinator.decoderState) && ...
+if any(strcmp(coordinator.state, {'LOCKED', 'LOSS_PENDING'})) && ...
+        ~isempty(coordinator.decoderState) && ...
         chunk.sourceSampleEnd > coordinator.decoderState.lastProcessedEndSample
     [coordinator.decoderState, coordinator.lastDecoderOutput] = ...
         radio.stream.lockedDecoderProcess( ...
             coordinator.decoderState, coordinator.channelController.ringBuffer);
+    [coordinator, events] = applyDecoderHealth( ...
+        coordinator, events, chunk.sourceSampleEnd);
 end
 
 output = makeOutput( ...
@@ -118,12 +122,18 @@ function [coordinator, events] = finishRace( ...
 coordinator.probeStates = coordinator.activeRace.states;
 coordinator.lastRace = race;
 coordinator.activeRace = [];
+oldState = coordinator.state;
 switch race.outcome
     case 'confirmed'
-        oldState = coordinator.state;
         coordinator.selectedProtocol = race.winner.protocol;
         coordinator.state = 'CATCHING_UP';
-        events(end+1) = makeEvent('PROTOCOL_CONFIRMED', oldState, ...
+        eventType = 'PROTOCOL_CONFIRMED';
+        if strcmp(oldState, 'RECLASSIFYING') && ...
+                ~isempty(coordinator.previousProtocol) && ...
+                ~strcmp(coordinator.previousProtocol, coordinator.selectedProtocol)
+            eventType = 'PROTOCOL_SWITCH_CONFIRMED';
+        end
+        events(end+1) = makeEvent(eventType, oldState, ...
             'CATCHING_UP', eventSample, coordinator.selectedProtocol, ...
             race.winner.evidenceClass); %#ok<AGROW>
         coordinator = startCatchup(coordinator);
@@ -135,16 +145,16 @@ switch race.outcome
         end
     case 'ambiguous'
         coordinator.state = 'AMBIGUOUS';
-        events(end+1) = makeEvent('PROTOCOL_AMBIGUOUS', 'CLASSIFYING', ...
+        events(end+1) = makeEvent('PROTOCOL_AMBIGUOUS', oldState, ...
             'AMBIGUOUS', eventSample, '', ...
             strjoin(race.confirmedProtocols, ',')); %#ok<AGROW>
     case 'rejected_all'
         coordinator.state = 'UNKNOWN';
-        events(end+1) = makeEvent('PROTOCOL_UNKNOWN', 'CLASSIFYING', ...
+        events(end+1) = makeEvent('PROTOCOL_UNKNOWN', oldState, ...
             'UNKNOWN', eventSample, '', 'all_probes_rejected'); %#ok<AGROW>
     case 'error'
         coordinator.state = 'ERROR';
-        events(end+1) = makeEvent('PROBE_ERROR', 'CLASSIFYING', ...
+        events(end+1) = makeEvent('PROBE_ERROR', oldState, ...
             'ERROR', eventSample, '', 'all_remaining_probes_failed'); %#ok<AGROW>
 end
 end
@@ -184,10 +194,14 @@ else
     coordinator.decoderState = radio.stream.lockedDecoderInit( ...
         coordinator.selectedProtocol, epoch, buffer.sampleRateHz, ...
         'InitialPdus', status.result.pdus, ...
-        'LastProcessedEndSample', status.result.catchupEndSample);
+        'LastProcessedEndSample', status.result.catchupEndSample, ...
+        'DecodeFcn', coordinator.options.lockedDecodeFcn, ...
+        'SuspectWindows', coordinator.options.lockedSuspectWindows, ...
+        'LostWindows', coordinator.options.lockedLostWindows);
     events(end+1) = makeEvent('CATCHUP_COMPLETE', 'CATCHING_UP', ...
         'LOCKED', eventSample, coordinator.selectedProtocol, ...
         'caught_up_to_live_edge'); %#ok<AGROW>
+    coordinator.previousProtocol = '';
 end
 end
 
@@ -216,11 +230,48 @@ coordinator.probeStates = [];
 coordinator.activeRace = [];
 coordinator.activeCatchup = [];
 coordinator.selectedProtocol = '';
+coordinator.previousProtocol = '';
 coordinator.decoderState = [];
 coordinator.lastDecoderOutput = [];
 coordinator.currentEpochId = uint64(0);
 coordinator.currentGeneration = uint64(0);
 coordinator.catchupPassCount = 0;
+end
+
+function [coordinator, events] = applyDecoderHealth( ...
+        coordinator, events, eventSample)
+health = coordinator.lastDecoderOutput.status;
+if strcmp(health, 'healthy')
+    if strcmp(coordinator.state, 'LOSS_PENDING')
+        events(end+1) = makeEvent('DECODER_RECOVERED', 'LOSS_PENDING', ...
+            'LOCKED', eventSample, coordinator.selectedProtocol, ...
+            'strong_evidence_recovered'); %#ok<AGROW>
+        coordinator.state = 'LOCKED';
+    end
+    return;
+end
+if strcmp(health, 'suspect') && strcmp(coordinator.state, 'LOCKED')
+    events(end+1) = makeEvent('DECODER_SUSPECT', 'LOCKED', ...
+        'LOSS_PENDING', eventSample, coordinator.selectedProtocol, ...
+        'consecutive_windows_without_strong_evidence'); %#ok<AGROW>
+    coordinator.state = 'LOSS_PENDING';
+    return;
+end
+if any(strcmp(health, {'lost', 'error'}))
+    oldState = coordinator.state;
+    coordinator.previousProtocol = coordinator.selectedProtocol;
+    coordinator.selectedProtocol = '';
+    coordinator.state = 'RECLASSIFYING';
+    coordinator.decoderState = [];
+    coordinator.probeStates = [];
+    coordinator.lastRace = [];
+    coordinator.currentGeneration = coordinator.currentGeneration + uint64(1);
+    coordinator.channelController.currentEpoch.generation = ...
+        coordinator.currentGeneration;
+    coordinator.channelController.currentEpoch.state = 'RECLASSIFYING';
+    events(end+1) = makeEvent('DECODER_LOST', oldState, ...
+        'RECLASSIFYING', eventSample, coordinator.previousProtocol, health); %#ok<AGROW>
+end
 end
 
 function output = makeOutput(coordinator, channel, events, race, catchup)
