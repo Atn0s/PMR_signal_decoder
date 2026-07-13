@@ -6,6 +6,7 @@ addpath(root);
 assert(common.detectSampleRate('data/dmr_1_78125.rawiq') == 78125);
 assert(common.detectSampleRate('data/synthesized_wideband_2.5MHz.rawiq') == 2500000);
 tests.runStreamingPhase1();
+tests.runStreamingPhase2();
 assert(isequal(radio.normalizeProtocolNames( ...
     {'dmr', 'P25', 'dpmr', 'nxdn', 'tetra'}), ...
     {'DMR', 'P25', 'dPMR', 'NXDN', 'TETRA'}));
