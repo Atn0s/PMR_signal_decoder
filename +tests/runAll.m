@@ -13,6 +13,9 @@ tests.runStreamingPhase5();
 tests.runStreamingPhase6();
 tests.runStreamingPhase7();
 tests.runStreamingPhase8();
+tests.runStreamingPhase9();
+tests.runStreamingPhase10();
+tests.runTunedTransition();
 assert(isequal(radio.normalizeProtocolNames( ...
     {'dmr', 'P25', 'dpmr', 'nxdn', 'tetra'}), ...
     {'DMR', 'P25', 'dPMR', 'NXDN', 'TETRA'}));

@@ -103,7 +103,7 @@ assert(strcmp(out.state, 'CLASSIFYING'));
 assert(strcmp(out.state, 'NO_SIGNAL'));
 assert(isempty(controller.currentEpoch));
 assert(strcmp(controller.lastClosedEpoch.closeReason, ...
-    'signal_ended_before_confirmation'));
+    'rf_activity_ended'));
 end
 
 function testDiscontinuityClosesEpoch()

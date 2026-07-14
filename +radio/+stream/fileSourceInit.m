@@ -6,6 +6,7 @@ p.addParameter('ChunkDurationSec', radio.stream.defaultConfig().chunkDurationSec
 p.addParameter('ChunkSamples', []);
 p.addParameter('DType', 'int16');
 p.addParameter('Scale', []);
+p.addParameter('HeaderBytes', 0);
 p.addParameter('ChannelId', 1);
 p.addParameter('CenterFrequencyHz', 0);
 p.parse(varargin{:});
@@ -26,6 +27,9 @@ if isempty(sampleRateHz) || ~isscalar(sampleRateHz) || sampleRateHz <= 0
 end
 
 dtype = normalizeDType(p.Results.DType);
+headerBytes = p.Results.HeaderBytes;
+validateattributes(headerBytes, {'numeric'}, ...
+    {'scalar', 'real', 'finite', 'nonnegative', 'integer'});
 scale = p.Results.Scale;
 if isempty(scale)
     scale = common.defaultIqScale(dtype.name);
@@ -45,6 +49,10 @@ validateattributes(chunkSamples, {'numeric'}, ...
 
 fid = -1;
 if isWav
+    if headerBytes ~= 0
+        error('radio:stream:fileSourceInit:WavHeaderBytes', ...
+            'HeaderBytes must be zero for WAV input.');
+    end
     info = audioinfo(path);
     if info.NumChannels < 2
         error('radio:stream:fileSourceInit:WavChannels', ...
@@ -63,7 +71,17 @@ else
             'Unable to open IQ input: %s', path);
     end
     info = dir(path);
-    totalSamples = uint64(floor(double(info.bytes) / ...
+    if headerBytes > info.bytes
+        fclose(fid);
+        error('radio:stream:fileSourceInit:HeaderBytes', ...
+            'HeaderBytes exceeds the input file size.');
+    end
+    if fseek(fid, headerBytes, 'bof') ~= 0
+        fclose(fid);
+        error('radio:stream:fileSourceInit:HeaderSeek', ...
+            'Unable to seek past the input header.');
+    end
+    totalSamples = uint64(floor(double(info.bytes - headerBytes) / ...
         double(2 * dtype.bytes)));
 end
 
@@ -76,6 +94,7 @@ source = struct( ...
     'dtypeName', dtype.name, ...
     'freadPrecision', dtype.freadPrecision, ...
     'scale', double(scale), ...
+    'headerBytes', double(headerBytes), ...
     'channelId', p.Results.ChannelId, ...
     'centerFrequencyHz', double(p.Results.CenterFrequencyHz), ...
     'totalSamples', totalSamples, ...

@@ -31,17 +31,58 @@ channel near complex baseband:
 ```matlab
 EXECUTION_MODE = 'parallel';
 PROTOCOLS = {};           % races DMR/P25/dPMR/NXDN/TETRA
-FREQ_LIST = [];           % DDC is not part of this entry yet
+FREQ_LIST = [];           % already-centered baseband
 BLIND_SEARCH = false;     % no PSD candidate search in this entry
 ```
 
-The parallel path expands a shared activity snapshot through the per-protocol
-probe windows. Once exactly one protocol produces strong evidence, only that
-protocol decodes the complete file from its beginning. This preserves PDUs that
-arrived before classification. A five-worker process pool is used because the
-current decoders include MEX/toolbox operations that are not thread-pool safe.
-If a process pool cannot be created, the report records `serial_fallback` rather
-than silently changing the decoded result.
+For one known carrier in a wideband capture, use the tuned transition instead
+of PFB discovery:
+
+```matlab
+EXECUTION_MODE = 'tuned-parallel';
+PROTOCOLS = {};                           % races all five protocols
+SAMPLE_RATE = [];                         % BVSP reads this from its header
+WIDEBAND_CENTER_FREQUENCY_HZ = 0;         % BVSP reads its RF center too
+FREQ_LIST = 1235200;                      % one relative offset in Hz
+BLIND_SEARCH = false;
+SHOW_FIGURE = false;
+```
+
+This path reads the wideband file in 10 ms blocks, performs stateful NCO down
+conversion plus anti-alias filtering, decimates to 120 kS/s, and then uses the
+existing multi-Epoch five-protocol race. The current phase accepts one carrier;
+it does not perform carrier discovery or time cropping.
+
+For streaming discovery in a wideband recording:
+
+```matlab
+EXECUTION_MODE = 'wideband';
+PROTOCOLS = {};                         % race all five per active carrier
+SAMPLE_RATE = 61.44e6;                  % actual SDR complex sample rate
+FREQ_LIST = [];                         % wideband mode discovers carriers
+BLIND_SEARCH = false;                   % legacy PSD blind search is not used
+WIDEBAND_CENTER_FREQUENCY_HZ = 430e6;   % actual SDR tuning frequency
+SHOW_FIGURE = false;                    % avoids whole-file loading
+```
+
+The wideband path reads 10 ms file chunks, runs a continuous 2x-oversampled
+WOLA/PFB, tracks fine-frequency candidates, and creates one existing
+`RaceCoordinator` per routed carrier. It is currently a correctness and file-
+replay implementation. The MATLAB CPU PFB has not yet reached real time at
+61.44 MS/s; see `docs/60MHz宽带实时IQ信道化与并行解码设计.md` for the measured
+baseline and acceleration plan.
+
+The parallel path first splits the centered file into independent RF Epochs.
+Continuous power below the off threshold for `offHangSec` (300 ms by default)
+closes the current Epoch; later activity always creates a new Epoch, even when
+it decodes to the same transmitter. Each Epoch independently races the enabled
+protocols and the winner decodes only that Epoch from its pre-trigger region.
+PDU de-duplication is local to an Epoch, and no cross-Epoch Session is created.
+
+A five-worker process pool is used because the current decoders include
+MEX/toolbox operations that are not thread-pool safe. If a process pool cannot
+be created, the report records `serial_fallback` rather than silently changing
+the decoded result.
 
 Then click Run. The scripts print decoded PDU lines in the Command Window and
 show the diagnostic figure when `SHOW_FIGURE` is true.
@@ -64,6 +105,21 @@ pdus = radio.scanFile('/path/to/tetra.wav', 'ProtocolNames', {'tetra'});
 [pdus, report] = radio.scanFile('/path/to/centered_78125.rawiq', ...
     'ExecutionMode', 'parallel', ...
     'BlindSearch', false);
+for k = 1:report.epochCount
+    fprintf('Epoch %d: %s, samples [%d,%d), PDUs=%d\n', ...
+        report.epochs(k).epochId, report.epochs(k).protocol, ...
+        report.epochs(k).candidateStartSample, ...
+        report.epochs(k).endSample, report.epochs(k).pduCount);
+end
+[tunedPdus, tunedReport] = radio.scanFile('/path/to/capture.bvsp', ...
+    'ExecutionMode', 'tuned-parallel', ...
+    'FreqList', 1235200, ...
+    'ProtocolNames', {});
+[widebandPdus, widebandReport] = radio.scanFile( ...
+    '/path/to/capture_61440000.rawiq', ...
+    'ExecutionMode', 'wideband', ...
+    'SampleRate', 61.44e6, ...
+    'CenterFrequencyHz', 430e6);
 rawPdus = radio.scanFile('/path/to/signal.rawiq', ...
     'ProtocolNames', {'dpmr'}, ...
     'Deduplicate', false);
@@ -116,7 +172,12 @@ no ProtocolNames                       -> DMR/P25/dPMR/NXDN (current resolver pr
 ProtocolNames contains 'nxdn'          -> run native MATLAB NXDN96 decoder
 ProtocolNames contains 'tetra'         -> run TETRA unless unsupported
 ProtocolNames contains 'tetra' and BlindSearch=true without FreqList
-                                      -> error; wideband TETRA blind scan is not implemented
+                                      -> error in the legacy serial scanIq path
+ExecutionMode='wideband', FreqList=[] -> WOLA/PFB discovery, then all enabled
+                                         protocols including TETRA race per carrier
+ExecutionMode='tuned-parallel', one FreqList value
+                                      -> known-carrier DDC to 120 kS/s, then all
+                                         enabled protocols including TETRA
 ```
 
 `tetra.scanFileWindows` remains the TETRA-only diagnostic entry point. It returns
@@ -127,15 +188,21 @@ window reports, envelope information, readable lines, and optional files under
 
 The serial scanner remains the default compatibility baseline. The first
 offline protocol-race integration is available through
-`ExecutionMode='parallel'` for a single already-centered baseband file. It does
-not yet perform PSD blind search, DDC, multiple-frequency scheduling, or direct
-SDR acquisition. The broader streaming design and exact blind-search behavior
+`ExecutionMode='parallel'` for a single already-centered baseband file. A
+single known carrier in a wideband file can now use
+`ExecutionMode='tuned-parallel'`; nonzero single-element `FreqList` also routes
+there automatically. Neither path performs PSD carrier discovery,
+multiple-frequency scheduling, or direct SDR acquisition. The broader
+streaming design and exact blind-search behavior
 are recorded in:
 
 ```text
 docs/已知频点多制式并行识别方案.md
 docs/实时微批处理五制式并行识别架构设计.md
 docs/离线基带并行接入scanner实现记录.md
+docs/离线多Epoch识别与上报实现记录.md
+docs/已知载频DDC过渡模块实现记录.md
+docs/实时频谱选频与循环回放解码前端设计.md
 ```
 
 ## JSON Output

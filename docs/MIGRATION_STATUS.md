@@ -76,5 +76,9 @@ Implemented from the Python `docs/MATLAB增量迁移方案.md` offline scope.
 
 Still outside this migration slice:
 
-- Python `realtime/`, SDR source, channelizer, worker, and realtime aggregator.
+- Production SDR source, real-time-capable accelerated channelizer, admission/
+  backpressure scheduler, and hardware timestamp integration. A MATLAB
+  correctness implementation of 2x WOLA/PFB, candidate tracking, fine DDC and
+  per-candidate protocol race now exists under `+radio/+wideband`, but its
+  61.44 MS/s CPU path is not yet real time.
 - Full okdmr-equivalent DMR FEC/CSBK/link-control coverage.

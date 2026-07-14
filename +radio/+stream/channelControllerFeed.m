@@ -17,14 +17,11 @@ events = emptyEvents();
 if bufferEvent.reset
     previousState = controller.state;
     if ~isempty(controller.currentEpoch)
-        controller.currentEpoch.endSample = chunk.sourceSampleStart;
-        controller.currentEpoch.state = 'CLOSED';
-        controller.currentEpoch.status = 'closed';
-        controller.currentEpoch.closeReason = 'input_discontinuity';
-        controller.lastClosedEpoch = controller.currentEpoch;
-        controller.currentEpoch = [];
+        [controller, ~] = radio.stream.channelControllerCloseEpoch( ...
+            controller, chunk.sourceSampleStart, 'input_discontinuity');
+    else
+        controller.generation = controller.generation + uint64(1);
     end
-    controller.generation = controller.generation + uint64(1);
     controller.state = 'NO_SIGNAL';
     controller.activityDetector = radio.stream.activityDetectorInit( ...
         controller.sampleRateHz, 'Config', controller.config.activity);
@@ -60,16 +57,11 @@ switch controller.state
     case 'CLASSIFYING'
         if activity.ended || (~activity.isActive && strcmp(activity.phase, 'inactive'))
             epochId = controller.currentEpoch.epochId;
-            controller.currentEpoch.endSample = chunk.sourceSampleEnd;
-            controller.currentEpoch.state = 'CLOSED';
-            controller.currentEpoch.status = 'closed';
-            controller.currentEpoch.closeReason = 'signal_ended_before_confirmation';
-            controller.lastClosedEpoch = controller.currentEpoch;
-            controller.currentEpoch = [];
-            controller.generation = controller.generation + uint64(1);
+            [controller, ~] = radio.stream.channelControllerCloseEpoch( ...
+                controller, chunk.sourceSampleEnd, 'rf_activity_ended');
             [controller, events] = transition(controller, events, ...
                 'NO_SIGNAL', chunk.sourceSampleEnd, ...
-                'signal_ended_before_confirmation', epochId);
+                'rf_activity_ended', epochId);
         end
 
     otherwise

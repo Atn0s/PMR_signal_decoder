@@ -1,5 +1,11 @@
 # 多相 DFT 滤波器组：从长 FIR 到子带 IQ 的完整推导
 
+> 工程实现已进入 `+radio/+wideband/channelizerInit.m` 和
+> `channelizerFeed.m`。当前采用 `hop=N/2` 的 2 倍过采样 WOLA/PFB，并增加了
+> 绝对窗口起点相位去旋转，使 FFT 通道输出能够作为跨 Chunk 连续的子带 IQ。
+> 60 MHz 系统参数、检测和调度设计见
+> [docs/60MHz宽带实时IQ信道化与并行解码设计.md](docs/60MHz宽带实时IQ信道化与并行解码设计.md)。
+
 ## 1. 核心结论
 
 多相 DFT 滤波器组（Polyphase DFT Filter Bank，PFB）的作用，不是简单地把一段信号变成一张频谱，而是：
