@@ -1,4 +1,4 @@
-function pdus = scanFile(path, varargin)
+function [pdus, report] = scanFile(path, varargin)
 %SCANFILE Scan an offline IQ file for DMR, P25, dPMR, NXDN, and TETRA metadata.
 p = inputParser;
 p.addParameter('FreqList', []);
@@ -13,9 +13,52 @@ p.addParameter('PythonRoot', '');
 p.addParameter('PythonExecutable', '');
 p.addParameter('Deduplicate', true);
 p.addParameter('ShowProgress', false);
+p.addParameter('ExecutionMode', 'serial');
+p.addParameter('StreamConfig', radio.stream.defaultConfig());
+p.addParameter('ParallelMode', 'parallel');
+p.addParameter('ParallelNumWorkers', 5);
+p.addParameter('ParallelPoolType', 'processes');
+p.addParameter('ParallelTimeoutSec', 120);
 p.parse(varargin{:});
 
 backend = lower(char(p.Results.PipelineBackend));
+executionMode = normalizeExecutionMode(p.Results.ExecutionMode);
+if strcmp(executionMode, 'parallel')
+    if ~any(strcmp(backend, {'matlab', 'native'}))
+        error('radio:scanFile:ParallelBackend', ...
+            'Parallel baseband scanning requires PipelineBackend=matlab.');
+    end
+    if p.Results.BlindSearch
+        error('radio:scanFile:ParallelBlindSearch', ...
+            ['Parallel mode currently accepts one already-centered baseband ', ...
+             'channel; set BlindSearch=false.']);
+    end
+    if ~isempty(p.Results.FreqList) && any(p.Results.FreqList ~= 0)
+        error('radio:scanFile:ParallelFrequencyList', ...
+            ['Parallel mode does not perform DDC yet; provide centered IQ ', ...
+             'and leave FreqList empty (or zero).']);
+    end
+    [pdus, report] = radio.stream.scanBasebandFile(path, ...
+        'ProtocolNames', p.Results.ProtocolNames, ...
+        'SampleRate', p.Results.SampleRate, ...
+        'IqDType', p.Results.IqDType, ...
+        'StreamConfig', p.Results.StreamConfig, ...
+        'RadioConfig', p.Results.RadioConfig, ...
+        'Mode', p.Results.ParallelMode, ...
+        'NumWorkers', p.Results.ParallelNumWorkers, ...
+        'PoolType', p.Results.ParallelPoolType, ...
+        'TimeoutSec', p.Results.ParallelTimeoutSec, ...
+        'DecoderBackend', p.Results.DecoderBackend, ...
+        'PythonRoot', p.Results.PythonRoot, ...
+        'PythonExecutable', p.Results.PythonExecutable, ...
+        'Deduplicate', p.Results.Deduplicate, ...
+        'ShowProgress', p.Results.ShowProgress);
+    pdus = radio.normalizePdus(pdus);
+    return;
+end
+
+report = struct('outcome', 'serial', 'selectedProtocol', '', ...
+    'executionMode', 'serial', 'pduCount', 0);
 switch backend
     case {'python', 'compat', 'py'}
         pdus = pybackend.scanFile(path, ...
@@ -52,4 +95,18 @@ switch backend
             'Unsupported pipeline backend: %s', backend);
 end
 pdus = radio.normalizePdus(pdus);
+report.pduCount = numel(pdus);
+end
+
+function mode = normalizeExecutionMode(value)
+mode = lower(strrep(char(value), '_', '-'));
+switch mode
+    case {'serial', 'compatibility'}
+        mode = 'serial';
+    case {'parallel', 'streaming-parallel', 'protocol-race'}
+        mode = 'parallel';
+    otherwise
+        error('radio:scanFile:ExecutionMode', ...
+            'ExecutionMode must be serial or parallel.');
+end
 end

@@ -25,6 +25,24 @@ SHOW_FIGURE = true;
 DEDUPLICATE = true;       % false keeps duplicate decoded frames for debugging
 ```
 
+For the offline five-protocol parallel race, the input must already contain one
+channel near complex baseband:
+
+```matlab
+EXECUTION_MODE = 'parallel';
+PROTOCOLS = {};           % races DMR/P25/dPMR/NXDN/TETRA
+FREQ_LIST = [];           % DDC is not part of this entry yet
+BLIND_SEARCH = false;     % no PSD candidate search in this entry
+```
+
+The parallel path expands a shared activity snapshot through the per-protocol
+probe windows. Once exactly one protocol produces strong evidence, only that
+protocol decodes the complete file from its beginning. This preserves PDUs that
+arrived before classification. A five-worker process pool is used because the
+current decoders include MEX/toolbox operations that are not thread-pool safe.
+If a process pool cannot be created, the report records `serial_fallback` rather
+than silently changing the decoded result.
+
 Then click Run. The scripts print decoded PDU lines in the Command Window and
 show the diagnostic figure when `SHOW_FIGURE` is true.
 
@@ -43,6 +61,9 @@ or pass `PythonExecutable` in programmatic calls.
 ```matlab
 pdus = radio.scanFile('/path/to/signal.rawiq', 'ProtocolNames', {'dmr'});
 pdus = radio.scanFile('/path/to/tetra.wav', 'ProtocolNames', {'tetra'});
+[pdus, report] = radio.scanFile('/path/to/centered_78125.rawiq', ...
+    'ExecutionMode', 'parallel', ...
+    'BlindSearch', false);
 rawPdus = radio.scanFile('/path/to/signal.rawiq', ...
     'ProtocolNames', {'dpmr'}, ...
     'Deduplicate', false);
@@ -102,15 +123,19 @@ ProtocolNames contains 'tetra' and BlindSearch=true without FreqList
 window reports, envelope information, readable lines, and optional files under
 `OutputDir`.
 
-## Future Known-Frequency Protocol Race
+## Known-Frequency Protocol Race
 
-The current serial scanner remains the compatibility baseline. The planned
-known-frequency multi-protocol probe/race design, MATLAB-versus-Python decision,
-branch strategy, and exact blind-search behavior are recorded in:
+The serial scanner remains the default compatibility baseline. The first
+offline protocol-race integration is available through
+`ExecutionMode='parallel'` for a single already-centered baseband file. It does
+not yet perform PSD blind search, DDC, multiple-frequency scheduling, or direct
+SDR acquisition. The broader streaming design and exact blind-search behavior
+are recorded in:
 
 ```text
 docs/已知频点多制式并行识别方案.md
 docs/实时微批处理五制式并行识别架构设计.md
+docs/离线基带并行接入scanner实现记录.md
 ```
 
 ## JSON Output

@@ -46,6 +46,7 @@ if isempty(pool)
         handle.fallbackReason = poolInfo.reason;
         handle = runSerial(handle, p.Results.TaskFcn, p.Results.TaskContext);
         handle.executionMode = 'serial_fallback';
+        handle.race.executionMode = 'serial_fallback';
         return;
     end
     error('radio:stream:parallelProbeRaceStart:PoolUnavailable', ...
