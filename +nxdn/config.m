@@ -20,4 +20,6 @@ cfg.lichMinFillBits = 7;
 cfg.maxFrameCandidates = inf;
 cfg.sacchMaxGapFrames = 1;
 cfg.dedupFrameBucketSamples = 1920;
+cfg.streamDcTimeConstantSec = 0.25;
+cfg.streamFlushPaddingSec = 0.010;
 end

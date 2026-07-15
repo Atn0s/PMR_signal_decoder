@@ -34,6 +34,8 @@ for first = 1:512:numel(iq)
     updated = updated + double(output.updated);
 end
 assert(updated == 4);
+assert(state.fftExecutionCount == uint64(4));
+assert(state.segmentCount == state.updateCount);
 snapshot = radio.scope.spectrumSnapshot(state);
 assert(snapshot.hasEstimate && snapshot.updateCount == uint64(4));
 assert(size(snapshot.waterfallPsd, 1) == 3);

@@ -8,12 +8,76 @@ if isempty(pool)
     return;
 end
 testUniqueAndAmbiguousResults();
+testBoundedFairShare();
+testStrongWinnerEarlyFinish();
+testDynamicCandidateNarrowing();
 testStaleGenerationIsolation();
 testCancellation();
 testAsynchronousLockedDecoder();
 testWarmParallelTiming();
 testRealP25SerialParallelAgreement();
+testWorkerProtocolPrewarm(pool);
+testClientRuntimePrewarm(pool);
 fprintf('Streaming phase-4 parallel race tests passed.\n');
+end
+
+function testDynamicCandidateNarrowing()
+snapshot = fakeSnapshot();
+context = struct( ...
+    'StatusByProtocol', struct('TETRA', 'confirmed'), ...
+    'DelaySecByProtocol', struct( ...
+        'DMR', 0.50, 'P25', 0.50, 'dPMR', 0.50, ...
+        'NXDN', 0.50, 'TETRA', 0.02));
+handle = radio.stream.parallelProbeRaceStart(snapshot, [], ...
+    'Mode', 'parallel', 'NumWorkers', 5, 'MaxInFlight', 1, ...
+    'EarlyConfirm', true, ...
+    'TaskFcn', @tests.fakeParallelProbeTask, ...
+    'TaskContext', context);
+assert(handle.submitted(1));
+mask = strcmp({handle.registry.name}, 'TETRA').';
+handle = radio.stream.parallelProbeRaceApplyCandidateMask(handle, mask);
+assert(handle.submitted(end));
+[handle, race] = radio.stream.parallelProbeRaceCollect( ...
+    handle, 'TimeoutSec', 10, 'PollIntervalSec', 0.005);
+assert(handle.completed && strcmp(race.outcome, 'confirmed'));
+assert(strcmp(race.winner.protocol, 'TETRA'));
+assert(race.canceledTaskCount >= 1);
+end
+
+function testBoundedFairShare()
+snapshot = fakeSnapshot();
+context = struct('Status', 'rejected', 'DelaySec', 0.03);
+handle = radio.stream.parallelProbeRaceStart(snapshot, [], ...
+    'Mode', 'parallel', 'NumWorkers', 5, ...
+    'MaxInFlight', 2, ...
+    'TaskFcn', @tests.fakeParallelProbeTask, ...
+    'TaskContext', context);
+assert(nnz(handle.submitted & ~handle.collected) == 2);
+[handle, race] = radio.stream.parallelProbeRaceCollect( ...
+    handle, 'TimeoutSec', 10);
+assert(handle.completed && strcmp(race.outcome, 'rejected_all'));
+assert(race.maxInFlight == 2 && race.peakInFlight <= 2);
+assert(nnz(handle.submitted) == 5 && all(handle.collected));
+end
+
+function testStrongWinnerEarlyFinish()
+snapshot = fakeSnapshot();
+context = struct( ...
+    'StatusByProtocol', struct('DMR', 'confirmed'), ...
+    'DelaySecByProtocol', struct( ...
+        'DMR', 0.03, 'P25', 0.50, 'dPMR', 0.50, ...
+        'NXDN', 0.50, 'TETRA', 0.50));
+handle = radio.stream.parallelProbeRaceStart(snapshot, [], ...
+    'Mode', 'parallel', 'NumWorkers', 5, ...
+    'EarlyConfirm', true, ...
+    'TaskFcn', @tests.fakeParallelProbeTask, ...
+    'TaskContext', context);
+[handle, race] = radio.stream.parallelProbeRaceCollect( ...
+    handle, 'TimeoutSec', 10, 'PollIntervalSec', 0.005);
+assert(handle.completed && strcmp(race.outcome, 'confirmed'));
+assert(strcmp(race.winner.protocol, 'DMR'));
+assert(race.earlyTerminated && race.canceledTaskCount >= 1);
+assert(race.elapsedSec < 0.40);
 end
 
 function testAsynchronousLockedDecoder()
@@ -172,6 +236,19 @@ assert(isequal({race.results.status}, {serial.race.results.status}));
 fprintf(['Real P25 race: serial %.3f s, cold parallel %.3f s, ', ...
     'warm parallel %.3f s.\n'], ...
     serial.elapsedSec, coldParallel.elapsedSec, parallel.elapsedSec);
+end
+
+function testWorkerProtocolPrewarm(pool)
+report = radio.stream.prewarmProtocolWorkers({'P25'}, ...
+    'Pool', pool, 'DurationSec', 0.02, 'TimeoutSec', 60);
+assert(report.success);
+assert(report.numWorkers == pool.NumWorkers);
+end
+
+function testClientRuntimePrewarm(pool)
+report = radio.stream.prewarmClientRuntime( ...
+    pool, {'P25'}, 'PoolType', 'processes', 'TimeoutSec', 60);
+assert(report.success && strcmp(report.protocol, 'P25'));
 end
 
 function snapshot = fakeSnapshot()

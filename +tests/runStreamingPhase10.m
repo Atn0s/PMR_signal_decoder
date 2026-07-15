@@ -160,9 +160,11 @@ cfg.stream.activity.offHangSec = 0.06;
 
 savedRng = rng;
 rng(5);
-signalSamples = round(0.40 * fs);
+% Leave at least one production DMR minimum-advance interval after the
+% synthetic probe reaches its 300 ms confirmation window.
+signalSamples = round(0.80 * fs);
 signal = makeFsk(signalSamples, fs, 21000);
-totalSamples = round(0.56 * fs);
+totalSamples = round(0.96 * fs);
 iq = 0.02 .* (randn(totalSamples, 1) + 1i .* randn(totalSamples, 1));
 signalStart = round(0.04 * fs) + 1;
 iq(signalStart:signalStart+signalSamples-1) = ...

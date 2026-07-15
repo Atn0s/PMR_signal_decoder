@@ -26,6 +26,16 @@ if ~isempty(coordinator.activeDecode)
         radio.stream.lockedDecoderCancel(coordinator.activeDecode);
     coordinator.activeDecode = [];
     decoderCanceled = true;
+    if ~isempty(coordinator.decoderState) && ...
+            isfield(coordinator.decoderState, 'actor')
+        coordinator.decoderState.actor = [];
+    end
+elseif ~isempty(coordinator.decoderState) && ...
+        isfield(coordinator.decoderState, 'actor') && ...
+        ~isempty(coordinator.decoderState.actor)
+    coordinator.decoderState = ...
+        radio.stream.lockedDecoderStateRelease(coordinator.decoderState);
+    decoderCanceled = true;
 end
 
 report = struct( ...

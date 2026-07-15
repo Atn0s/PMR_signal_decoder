@@ -99,6 +99,9 @@ for startSample = 0:100:600
         'SequenceNumber', startSample / 100);
     [coordinator, output] = ...
         radio.stream.raceCoordinatorFeed(coordinator, chunk);
+    if ~isempty(coordinator.decoderState)
+        coordinator.decoderState.incremental.minAdvanceSec = 0.1;
+    end
 end
 
 assert(strcmp(output.state, 'LOCKED'));

@@ -9,13 +9,16 @@ tests.runStreamingPhase1();
 tests.runStreamingPhase2();
 tests.runStreamingPhase3();
 tests.runStreamingPhase4();
+tests.runProtocolCandidateGate();
 tests.runStreamingPhase5();
 tests.runStreamingPhase6();
+tests.runPersistentLockedDecoder();
 tests.runStreamingPhase7();
 tests.runStreamingPhase8();
 tests.runStreamingPhase9();
 tests.runStreamingPhase10();
 tests.runTunedTransition();
+tests.runFusedMultiDdc();
 tests.runRealtimeFrontendPhase1();
 tests.runRealtimeFrontendPhase2();
 tests.runRealtimeFrontendPhase3();
@@ -73,6 +76,7 @@ synthetic = p25.decodeNid(syntheticNid);
 assert(~synthetic.valid_bch && ~synthetic.corrected);
 
 tests.runNxdn96();
+tests.runNxdn96Streaming();
 
 cfg = tetra.config();
 seqs = tetra.trainingSequences();

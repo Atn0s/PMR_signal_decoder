@@ -5,16 +5,19 @@ p.addParameter('SilenceDurationSec', []);
 p.addParameter('WaitForTasks', true);
 p.addParameter('TaskTimeoutSec', 120);
 p.addParameter('PollIntervalSec', 0.020);
+p.addParameter('FlushDdc', true);
 p.parse(varargin{:});
 if scanner.finalized
     report = buildReport(scanner);
     return;
 end
 
-[scanner.ddc, flushChunk] = radio.tuned.ddcFlush(scanner.ddc);
-[scanner, readyChunks] = ...
-    radio.tuned.streamScannerQueueBaseband(scanner, flushChunk);
-scanner = feedChunks(scanner, readyChunks);
+if p.Results.FlushDdc
+    [scanner.ddc, flushChunk] = radio.tuned.ddcFlush(scanner.ddc);
+    [scanner, readyChunks] = ...
+        radio.tuned.streamScannerQueueBaseband(scanner, flushChunk);
+    scanner = feedChunks(scanner, readyChunks);
+end
 [scanner, finalChunks] = radio.tuned.streamScannerQueueBaseband( ...
     scanner, [], 'Flush', true);
 scanner = feedChunks(scanner, finalChunks);
@@ -32,8 +35,12 @@ end
 
 silenceSec = p.Results.SilenceDurationSec;
 if isempty(silenceSec)
-    silenceSec = scanner.streamConfig.activity.offHangSec + ...
-        2 * scanner.streamConfig.chunkDurationSec;
+    if strcmp(scanner.coordinator.state, 'NO_SIGNAL')
+        silenceSec = 0;
+    else
+        silenceSec = scanner.streamConfig.activity.offHangSec + ...
+            2 * scanner.streamConfig.chunkDurationSec;
+    end
 end
 validateattributes(silenceSec, {'numeric'}, ...
     {'scalar', 'real', 'finite', 'nonnegative'});

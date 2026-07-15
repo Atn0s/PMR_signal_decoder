@@ -1,0 +1,59 @@
+function lockedDecoderActorWorker(state, outputQueue, actorId)
+%LOCKEDDECODERACTORWORKER Own decoder state for the lifetime of one channel.
+inputQueue = parallel.pool.PollableDataQueue;
+task = getCurrentTask();
+taskId = 0;
+if ~isempty(task), taskId = double(task.ID); end
+send(outputQueue, struct( ...
+    'type', 'ready', ...
+    'actorId', uint64(actorId), ...
+    'inputQueue', inputQueue, ...
+    'workerTaskId', taskId));
+
+while true
+    message = poll(inputQueue, 0.1);
+    if isempty(message), continue; end
+    if ~isstruct(message) || ~isfield(message, 'type'), continue; end
+    kind = char(message.type);
+    if strcmp(kind, 'stop')
+        send(outputQueue, struct( ...
+            'type', 'stopped', 'actorId', uint64(actorId)));
+        return;
+    end
+    if ~strcmp(kind, 'decode') || message.actorId ~= actorId
+        continue;
+    end
+    try
+        input = message.input;
+        if isfield(input, 'actorSeedIq')
+            state.incremental.nativeSeed = ...
+                radio.stream.lockedDecoderActorUnpackChunk( ...
+                    state.incremental.nativeSeed, input.actorSeedIq);
+            input = rmfield(input, 'actorSeedIq');
+        end
+        if isfield(input, 'actorIq')
+            if isstruct(input.chunk)
+                input.chunk = radio.stream.lockedDecoderActorUnpackChunk( ...
+                    input.chunk, input.actorIq);
+            end
+            input = rmfield(input, 'actorIq');
+        end
+        [state, output] = radio.stream.lockedDecoderProcessChunk( ...
+            state, input);
+        shadow = radio.stream.lockedDecoderActorShadow(state);
+        send(outputQueue, struct( ...
+            'type', 'result', ...
+            'actorId', uint64(actorId), ...
+            'requestId', uint64(message.requestId), ...
+            'decoderState', shadow, ...
+            'output', output));
+    catch ME
+        send(outputQueue, struct( ...
+            'type', 'error', ...
+            'actorId', uint64(actorId), ...
+            'requestId', uint64(message.requestId), ...
+            'errorReason', sprintf('%s: %s', ME.identifier, ME.message)));
+        return;
+    end
+end
+end

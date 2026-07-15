@@ -22,4 +22,5 @@ cfg.activity.spectralNoiseEnabled = true;
 cfg.activity.noiseFftLength = 2048;
 cfg.activity.noiseMaxSegments = 4;
 cfg.activity.noiseMinSamples = 64;
+cfg.activity.spectralNoiseUpdateSec = 0.5;
 end

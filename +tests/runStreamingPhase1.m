@@ -6,8 +6,30 @@ testRingBufferRanges();
 testActivityAndController();
 testAdaptiveNoiseRejectsLeadingSilence();
 testAdaptiveActivityIsTimeShiftInvariant();
+testSpectralNoiseWorkIsRateLimited();
 testDiscontinuityClosesEpoch();
 fprintf('Streaming phase-1 tests passed.\n');
+end
+
+function testSpectralNoiseWorkIsRateLimited()
+fs = 125000;
+cfg = radio.stream.defaultConfig();
+cfg.activity.spectralNoiseUpdateSec = 0.5;
+detector = radio.stream.activityDetectorInit(fs, ...
+    'Config', cfg.activity);
+savedRng = rng;
+rng(8031);
+noise = makeNoise(round(1.0 * fs), -47);
+rng(savedRng);
+chunkSamples = round(0.1 * fs);
+for first = 1:chunkSamples:numel(noise)
+    last = min(numel(noise), first + chunkSamples - 1);
+    chunk = radio.stream.makeIqChunk(noise(first:last), fs, first - 1, ...
+        'SequenceNumber', floor((first - 1) / chunkSamples));
+    [detector, result] = radio.stream.activityDetectorFeed(detector, chunk); %#ok<ASGLU>
+end
+assert(detector.spectralEstimateCount <= uint64(3));
+assert(detector.spectralEstimateCount >= uint64(2));
 end
 
 function testAdaptiveNoiseRejectsLeadingSilence()

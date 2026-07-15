@@ -13,7 +13,7 @@ p.addParameter('MaxLoops', inf);
 p.addParameter('EpochSilenceSec', 0.4);
 p.addParameter('InputChunkDurationSec', 0.020);
 p.addParameter('PlayoutDelaySec', 0.10);
-p.addParameter('MaxChunksPerTick', 8);
+p.addParameter('MaxChunksPerTick', 16);
 p.addParameter('MaxCarrierPaths', 5);
 p.addParameter('DecoderQueueLimitSec', 15.0);
 p.addParameter('DecoderCatchupChunksPerTick', 8);
@@ -31,7 +31,13 @@ p.addParameter('LockedDecodeFcn', []);
 p.addParameter('Deduplicate', false);
 p.addParameter('PrintToCommandWindow', true);
 p.addParameter('PrewarmDdc', true);
+p.addParameter('UseFusedDdc', true);
 p.addParameter('WarmParallelPool', true);
+p.addParameter('PrewarmProtocols', true);
+p.addParameter('ProbeMaxInFlightPerChannel', []);
+p.addParameter('EarlyProbeConfirm', true);
+p.addParameter('EarlyProbeConfirmMinConfidence', 0.99);
+p.addParameter('CandidateGateEnabled', true);
 p.addParameter('AutoStartPreview', false);
 p.parse(varargin{:});
 options = p.Results;
@@ -152,11 +158,15 @@ state = struct( ...
     'scannerRequestedSample', uint64(0), ...
     'scannerReadySample', [], ...
     'decoderQueue', {cell(0, 1)}, ...
+    'decoderQueueHead', 1, ...
     'decoderQueueSamples', uint64(0), ...
     'runtimePrepared', false, ...
     'runtimeWorkersWarmed', false, ...
     'runtimePoolInfo', [], ...
+    'runtimeWarmReport', [], ...
+    'runtimeClientWarmReport', [], ...
     'preparedDdcStates', {cell(0, 1)}, ...
+    'preparedFusedDdcState', [], ...
     'pdus', struct([]), ...
     'log', {cell(0, 1)}, ...
     'timer', [], ...
@@ -167,8 +177,9 @@ state = struct( ...
     'inputLagSec', 0, ...
     'maxInputLagSec', 0, ...
     'lastUiUpdateSec', 0, ...
+    'lastDecoderSummaryKey', '', ...
     'lastSpectrumDrawCount', uint64(0));
-timerObject = timer('ExecutionMode', 'fixedSpacing', 'BusyMode', 'drop', ...
+timerObject = timer('ExecutionMode', 'fixedRate', 'BusyMode', 'drop', ...
     'Period', options.InputChunkDurationSec, 'TimerFcn', @onTimer, ...
     'ErrorFcn', @onTimerError, 'Name', 'PMRLeanLiveReplay');
 state.timer = timerObject;
@@ -441,13 +452,25 @@ end
                 processed < options.MaxChunksPerTick && ...
                 ~state.source.terminal
             processOneChunk();
+            if ~isempty(state.scanner) && ...
+                    isempty(state.scannerBuildFuture) && ...
+                    ~decoderQueueIsEmpty()
+                % Keep the normal 1x path block-synchronous.  The queue is
+                % retained for asynchronous attachment and exceptional
+                % catch-up, not as an avoidable second playout buffer.
+                drainDecoderQueue(1, inf);
+            end
             processed = processed + 1;
         end
         pollScannerBuild();
         drainDecoderQueue(options.DecoderCatchupChunksPerTick, ...
             options.DecoderCatchupBudgetSec);
-        state.inputLagSec = max(0, double(targetSample - min( ...
-            targetSample, state.source.globalNextSample)) / ...
+        elapsed = toc(state.clockToken);
+        currentTargetSample = state.clockBaseSample + uint64(floor( ...
+            max(0, elapsed - options.PlayoutDelaySec) * ...
+            state.metadata.sampleRateHz));
+        state.inputLagSec = max(0, double(currentTargetSample - min( ...
+            currentTargetSample, state.source.globalNextSample)) / ...
             state.metadata.sampleRateHz);
         state.maxInputLagSec = max(state.maxInputLagSec, state.inputLagSec);
         if elapsed - state.lastUiUpdateSec >= 0.1 || state.source.terminal
@@ -505,27 +528,65 @@ end
             appendLog(sprintf([ ...
                 'Parallel runtime unavailable (%s); protocol probes will ', ...
                 'fall back according to their execution mode.'], info.reason));
+        elseif options.PrewarmProtocols && isempty(options.TaskFcn)
+            warmReport = radio.stream.prewarmProtocolWorkers( ...
+                options.ProtocolNames, ...
+                'Pool', pool, ...
+                'NumWorkers', options.NumWorkers, ...
+                'PoolType', options.PoolType);
+            state.runtimeWarmReport = warmReport;
+            state.runtimeWorkersWarmed = warmReport.success;
+            if warmReport.success
+                appendLog(sprintf([ ...
+                    'All protocol entry points warmed on %d workers in ', ...
+                    '%.3f s.'], warmReport.numWorkers, ...
+                    warmReport.elapsedSec));
+            else
+                appendLog(sprintf('Protocol worker warm-up incomplete: %s', ...
+                    warmReport.errorReason));
+            end
+            clientWarm = radio.stream.prewarmClientRuntime( ...
+                pool, options.ProtocolNames, 'PoolType', options.PoolType);
+            state.runtimeClientWarmReport = clientWarm;
+            if ~clientWarm.success
+                appendLog(sprintf('Client runtime warm-up incomplete: %s', ...
+                    clientWarm.errorReason));
+            end
+        else
+            state.runtimeWorkersWarmed = true;
         end
 
         [tunedConfig, ~] = radio.tuned.resolveInputConfig( ...
             state.metadata.sampleRateHz, options.TunedConfig);
         if options.PrewarmDdc
-            prepared = cell(options.MaxCarrierPaths, 1);
-            for pathIndex = 1:options.MaxCarrierPaths
-                ddc = radio.tuned.ddcInit( ...
-                    state.metadata.sampleRateHz, 0, ...
-                    'Config', tunedConfig, ...
-                    'InputCenterFrequencyHz', ...
-                        state.metadata.centerFrequencyHz, ...
-                    'ChannelId', pathIndex, ...
-                    'MixerMode', 'external');
-                converter = ddc.converter;
-                converter(complex(zeros(ddc.inputBlockSamples, 1)));
-                reset(converter);
-                ddc.converter = converter;
-                prepared{pathIndex} = ddc;
+            if options.UseFusedDdc
+                state.preparedFusedDdcState = ...
+                    radio.tuned.multiDdcInit( ...
+                        state.metadata.sampleRateHz, ...
+                        zeros(options.MaxCarrierPaths, 1), ...
+                        'Config', tunedConfig, ...
+                        'InputCenterFrequencyHz', ...
+                            state.metadata.centerFrequencyHz, ...
+                        'Capacity', options.MaxCarrierPaths, ...
+                        'Prewarm', true);
+            else
+                prepared = cell(options.MaxCarrierPaths, 1);
+                for pathIndex = 1:options.MaxCarrierPaths
+                    ddc = radio.tuned.ddcInit( ...
+                        state.metadata.sampleRateHz, 0, ...
+                        'Config', tunedConfig, ...
+                        'InputCenterFrequencyHz', ...
+                            state.metadata.centerFrequencyHz, ...
+                        'ChannelId', pathIndex, ...
+                        'MixerMode', 'external');
+                    converter = ddc.converter;
+                    converter(complex(zeros(ddc.inputBlockSamples, 1)));
+                    reset(converter);
+                    ddc.converter = converter;
+                    prepared{pathIndex} = ddc;
+                end
+                state.preparedDdcStates = prepared;
             end
-            state.preparedDdcStates = prepared;
         end
         appendLog(sprintf('Decoder runtime prepared in %.3f s.', ...
             toc(token)));
@@ -535,8 +596,9 @@ end
         state.scannerRequestedSample = state.source.globalNextSample;
         state.scannerReadySample = [];
         state.decoderQueue = cell(0, 1);
+        state.decoderQueueHead = 1;
         state.decoderQueueSamples = uint64(0);
-        if ~isempty(state.decoderQueue)
+        if ~decoderQueueIsEmpty()
             error('radio_live_frontend:DecoderQueueReset', ...
                 'Decoder queue reset left %d entries.', ...
                 numel(state.decoderQueue));
@@ -544,8 +606,11 @@ end
         state.scannerBuildToken = tic;
         args = scannerInitArguments(offsets, tunedConfig);
 
-        if numel(state.preparedDdcStates) >= numel(offsets)
-            setMode('ATTACHING'); drawnow limitrate;
+        hasPreparedFused = options.UseFusedDdc && ...
+            ~isempty(state.preparedFusedDdcState);
+        if hasPreparedFused || ...
+                numel(state.preparedDdcStates) >= numel(offsets)
+            setMode('ATTACHING');
             scanner = radio.tuned.multiStreamScannerInit(args{:});
             attachScanner(scanner);
             return;
@@ -563,7 +628,7 @@ end
             return;
         end
 
-        setMode('ATTACHING'); drawnow;
+        setMode('ATTACHING');
         appendLog(sprintf([ ...
             'Attaching %d carrier(s) on the client process; the input ', ...
             'source will not be reopened.'], numel(offsets)));
@@ -573,7 +638,8 @@ end
 
     function args = scannerInitArguments(offsets, tunedConfig)
         prepared = cell(0, 1);
-        if numel(state.preparedDdcStates) >= numel(offsets)
+        if ~options.UseFusedDdc && ...
+                numel(state.preparedDdcStates) >= numel(offsets)
             prepared = state.preparedDdcStates(1:numel(offsets));
         end
         args = {state.metadata.sampleRateHz, offsets, ...
@@ -590,7 +656,16 @@ end
             'Deduplicate', options.Deduplicate, ...
             'PrewarmDdc', options.PrewarmDdc, ...
             'WarmParallelPool', false, ...
-            'DdcStates', prepared};
+            'DdcStates', prepared, ...
+            'ProbeMaxInFlightPerChannel', ...
+                options.ProbeMaxInFlightPerChannel, ...
+            'EarlyProbeConfirm', options.EarlyProbeConfirm, ...
+            'EarlyProbeConfirmMinConfidence', ...
+                options.EarlyProbeConfirmMinConfidence, ...
+            'CandidateGateEnabled', options.CandidateGateEnabled};
+        args = [args, { ...
+            'UseFusedDdc', options.UseFusedDdc, ...
+            'FusedDdcState', state.preparedFusedDdcState}];
     end
 
     function [pool, info] = availableBuildPool()
@@ -598,7 +673,7 @@ end
         info = struct('available', false, 'reason', 'serial_mode');
         mode = lower(char(options.ParallelMode));
         if ~any(strcmp(mode, {'auto', 'parallel'})), return; end
-        if options.PrewarmDdc && ~state.runtimeWorkersWarmed, return; end
+        if options.WarmParallelPool && ~state.runtimeWorkersWarmed, return; end
         [pool, info] = radio.stream.acquireParallelPool( ...
             'NumWorkers', options.NumWorkers, ...
             'PoolType', options.PoolType, ...
@@ -619,6 +694,7 @@ end
             scanner = fetchOutputs(future);
         catch ME
             state.decoderQueue = cell(0, 1);
+            state.decoderQueueHead = 1;
             state.decoderQueueSamples = uint64(0);
             setMode('ERROR');
             runButton.Enable = valueOnOff(~isempty(state.selections));
@@ -634,7 +710,8 @@ end
             scanner.channels{channelIndex}.timerToken = tic;
         end
         state.scanner = scanner;
-        if state.decoderQueueSamples == 0 && ~isempty(state.decoderQueue)
+        state.lastDecoderSummaryKey = '';
+        if state.decoderQueueSamples == 0 && ~decoderQueueIsEmpty()
             error('radio_live_frontend:DecoderQueueAttach', ...
                 'Decoder attachment introduced %d queue entries.', ...
                 numel(state.decoderQueue));
@@ -682,21 +759,22 @@ end
 
     function drainDecoderQueue(maxChunks, budgetSec)
         if isempty(state.scanner) || state.scanner.finalized || ...
-                isempty(state.decoderQueue)
+                decoderQueueIsEmpty()
             return;
         end
         token = tic;
         processed = 0;
-        while ~isempty(state.decoderQueue) && processed < maxChunks
+        while ~decoderQueueIsEmpty() && processed < maxChunks
             if processed > 0 && toc(token) >= budgetSec, break; end
-            chunk = state.decoderQueue{1};
+            chunk = state.decoderQueue{state.decoderQueueHead};
             if ~isstruct(chunk)
                 error('radio_live_frontend:DecoderQueueType', ...
                     ['Decoder queue returned %s instead of an IQ chunk ', ...
                     '(remaining=%d, processed=%d).'], ...
-                    class(chunk), numel(state.decoderQueue), processed);
+                    class(chunk), decoderQueueCount(), processed);
             end
-            state.decoderQueue(1) = [];
+            state.decoderQueue{state.decoderQueueHead} = [];
+            state.decoderQueueHead = state.decoderQueueHead + 1;
             state.decoderQueueSamples = state.decoderQueueSamples - ...
                 uint64(numel(chunk.iq));
             chunk.iq = double(chunk.iq);
@@ -719,6 +797,7 @@ end
             printStateEvents(multiOutput);
             processed = processed + 1;
         end
+        compactDecoderQueue();
         if processed > 0 && ~isempty(state.scanner)
             updateDecoderSummary();
         end
@@ -795,6 +874,11 @@ end
             winners{k} = valueOr(channel.lastSelectedProtocol, '-');
             states{k} = channel.coordinator.state;
         end
+        summaryKey = strjoin([states(:); winners(:)], '|');
+        if strcmp(summaryKey, state.lastDecoderSummaryKey)
+            return;
+        end
+        state.lastDecoderSummaryKey = summaryKey;
         winnerLabel.Text = strjoin(winners, ' | ');
         if all(strcmp(states, 'LOCKED'))
             setMode('LOCKED');
@@ -836,7 +920,7 @@ end
         end
         drainDecoderQueue(inf, inf);
         if ~isempty(state.scanner) && ~state.scanner.finalized
-            setMode('FINALIZING'); drawnow;
+            setMode('FINALIZING');
             previousPduCount = numel(state.pdus);
             [state.scanner, ~] = ...
                 radio.tuned.multiStreamScannerFinalize(state.scanner);
@@ -942,6 +1026,13 @@ end
                 'states', {states}, ...
                 'feedCount', state.scanner.feedCount, ...
                 'inputSampleCount', state.scanner.inputSampleCount, ...
+                'meanFeedElapsedSec', state.scanner.totalFeedElapsedSec / ...
+                    max(1, double(state.scanner.feedCount)), ...
+                'maxFeedElapsedSec', state.scanner.maxFeedElapsedSec, ...
+                'maxFeedBreakdown', state.scanner.maxFeedBreakdown, ...
+                'meanDdcElapsedSec', state.scanner.totalDdcElapsedSec / ...
+                    max(1, double(state.scanner.feedCount)), ...
+                'maxDdcElapsedSec', state.scanner.maxDdcElapsedSec, ...
                 'finalized', state.scanner.finalized);
         end
         sourceNextSample = uint64(0);
@@ -1027,6 +1118,7 @@ end
         state.scannerRequestedSample = uint64(0);
         state.scannerReadySample = [];
         state.decoderQueue = cell(0, 1);
+        state.decoderQueueHead = 1;
         state.decoderQueueSamples = uint64(0);
     end
 
@@ -1058,6 +1150,9 @@ end
         if ~isfield(state, 'decoderQueue')
             state.decoderQueue = cell(0, 1);
         end
+        if ~isfield(state, 'decoderQueueHead')
+            state.decoderQueueHead = 1;
+        end
         if ~isfield(state, 'decoderQueueSamples')
             state.decoderQueueSamples = uint64(0);
         end
@@ -1070,15 +1165,51 @@ end
         if ~isfield(state, 'runtimePoolInfo')
             state.runtimePoolInfo = [];
         end
+        if ~isfield(state, 'runtimeWarmReport')
+            state.runtimeWarmReport = [];
+        end
+        if ~isfield(state, 'runtimeClientWarmReport')
+            state.runtimeClientWarmReport = [];
+        end
         if ~isfield(state, 'preparedDdcStates')
             state.preparedDdcStates = cell(0, 1);
+        end
+        if ~isfield(state, 'preparedFusedDdcState')
+            state.preparedFusedDdcState = [];
         end
         if ~isfield(state, 'clockBaseSample')
             state.clockBaseSample = uint64(0);
         end
+        if ~isfield(state, 'lastDecoderSummaryKey')
+            state.lastDecoderSummaryKey = '';
+        end
         if ~isfield(state, 'closing')
             state.closing = false;
         end
+    end
+
+    function tf = decoderQueueIsEmpty()
+        tf = state.decoderQueueHead > numel(state.decoderQueue);
+    end
+
+    function count = decoderQueueCount()
+        count = max(0, numel(state.decoderQueue) - ...
+            state.decoderQueueHead + 1);
+    end
+
+    function compactDecoderQueue()
+        if decoderQueueIsEmpty()
+            state.decoderQueue = cell(0, 1);
+            state.decoderQueueHead = 1;
+            return;
+        end
+        if state.decoderQueueHead <= 64 && ...
+                state.decoderQueueHead <= numel(state.decoderQueue) / 2
+            return;
+        end
+        state.decoderQueue = state.decoderQueue( ...
+            state.decoderQueueHead:end);
+        state.decoderQueueHead = 1;
     end
 
     function tf = hasLiveSource()
@@ -1111,7 +1242,10 @@ end
     end
 
     function setMode(mode)
-        state.mode = char(mode); stateLabel.Text = state.mode;
+        mode = char(mode);
+        if strcmp(state.mode, mode), return; end
+        state.mode = mode;
+        stateLabel.Text = state.mode;
     end
 
     function appendLog(message, refresh)

@@ -25,7 +25,7 @@ assert(scanner.warmupElapsedSec >= 0);
 chunkSamples = round(0.010 * fs);
 lockedSeen = false;
 newPduCount = 0;
-for k = 0:39
+for k = 0:69
     n = (0:chunkSamples-1).' + k * chunkSamples;
     iq = 0.3 .* exp(1i .* 2 .* pi .* offsetHz .* n ./ fs);
     chunk = radio.stream.makeIqChunk(iq, fs, uint64(k * chunkSamples), ...
@@ -46,7 +46,7 @@ assert(isfield(scanner.pdus(1).extra, 'tuned'));
 assert(scanner.pdus(1).extra.tuned.decimation_factor == 2);
 assert(~scanner.pdus(1).extra.tuned.mapping_includes_filter_delay);
 
-for k = 40:49
+for k = 70:79
     chunk = radio.stream.makeIqChunk( ...
         complex(zeros(chunkSamples, 1)), fs, uint64(k * chunkSamples), ...
         'SequenceNumber', uint64(k), ...
@@ -59,10 +59,10 @@ assert(scanner.finalized && report.finalized);
 assert(strcmp(report.selectedProtocol, 'DMR'));
 assert(report.epochCount >= 1);
 assert(report.pduCount == numel(scanner.pdus));
-assert(report.inputSampleCount == uint64(50 * chunkSamples));
+assert(report.inputSampleCount == uint64(80 * chunkSamples));
 assertThrows(@() radio.tuned.streamScannerFeed(scanner, ...
     radio.stream.makeIqChunk(complex(zeros(chunkSamples, 1)), ...
-    fs, uint64(50 * chunkSamples), 'CenterFrequencyHz', centerHz)), ...
+    fs, uint64(80 * chunkSamples), 'CenterFrequencyHz', centerHz)), ...
     'radio:tuned:streamScannerFeed:Finalized');
 
 % A DMR-like 40 ms on / 20 ms off pattern never satisfies a 50 ms

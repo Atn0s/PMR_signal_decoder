@@ -9,11 +9,14 @@ if handle.completed
 end
 
 for k = 1:numel(handle.futures)
-    if handle.submitted(k) && ~handle.collected(k)
-        future = handle.futures{k};
-        try
-            cancel(future);
-        catch
+    if ~handle.collected(k)
+        if handle.submitted(k)
+            future = handle.futures{k};
+            try
+                cancel(future);
+            catch
+            end
+            handle.canceledTaskCount = handle.canceledTaskCount + 1;
         end
         handle.results(k) = radio.stream.makeProbeResult( ...
             handle.states(k), 'error', handle.snapshot, ...
@@ -32,5 +35,9 @@ handle.race.staleResultCount = handle.staleResultCount;
 handle.race.taskErrorCount = handle.taskErrorCount;
 handle.race.canceled = true;
 handle.race.fallbackReason = handle.fallbackReason;
+handle.race.maxInFlight = handle.maxInFlight;
+handle.race.peakInFlight = handle.peakInFlight;
+handle.race.earlyTerminated = handle.earlyTerminated;
+handle.race.canceledTaskCount = handle.canceledTaskCount;
 status = handle.race;
 end

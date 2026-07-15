@@ -11,6 +11,9 @@ The current default path is native MATLAB for IQ loading, sample-rate detection,
 PSD candidate search, DDC/resampling, FSK frontends, and DMR/P25/dPMR/NXDN metadata
 decode. The proven Python decoders remain available as an explicit fallback.
 
+Project guides, architecture notes, protocol references, and implementation
+records are organized in the [documentation index](docs/README.md).
+
 ## Quick Start
 
 From MATLAB:
@@ -37,7 +40,8 @@ WAV input.
 To generate the deterministic 2.5 MHz, five-protocol near-synchronous stress
 fixture, run `synthesizeFiveSignal2p5MHz('Overwrite', true)`.  The opt-in
 real-data acceptance entry point is `tests.runFiveSignal2p5MHzAcceptance`; see
-`docs/2.5MHz五路近同步信号合成与验收.md` for the scenario and current limits.
+the [2.5 MHz five-signal acceptance record](docs/records/validation/2.5MHz五路近同步信号合成与验收.md)
+for the scenario and current limits.
 
 For the click-to-run workflow, open one of these top-level scripts, edit
 `TARGET_FILE`, then click Run:
@@ -147,6 +151,6 @@ The Python project root is resolved from:
 +apps/        Programmatic MATLAB UI
 examples/      Example scripts
 tools/         Python and MATLAB helper scripts
-docs/          Migration notes
+docs/          Guides, architecture, protocol references, and implementation records
 golden/        Generated Python baseline vectors
 ```

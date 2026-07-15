@@ -18,6 +18,9 @@ for k = 1:scanner.channelCount
             'Reason', p.Results.Reason);
     taskCount = taskCount + channelReports{k}.taskCount;
 end
+if scanner.useFusedDdc && ~isempty(scanner.fusedDdc)
+    try, release(scanner.fusedDdc.converter); catch, end
+end
 scanner.finalized = true;
 report = struct('reason', char(p.Results.Reason), ...
     'channelReports', {channelReports}, ...

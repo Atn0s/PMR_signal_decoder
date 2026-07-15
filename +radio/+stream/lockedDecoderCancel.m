@@ -1,6 +1,8 @@
 function [handle, status] = lockedDecoderCancel(handle)
 %LOCKEDDECODERCANCEL Best-effort cancel of an obsolete decoder pass.
-if ~handle.completed && ~isempty(handle.future)
+if strcmp(handle.mode, 'persistent_worker') && ~isempty(handle.actor)
+    handle.actor = radio.stream.lockedDecoderActorStop(handle.actor);
+elseif ~handle.completed && ~isempty(handle.future)
     try
         cancel(handle.future);
     catch

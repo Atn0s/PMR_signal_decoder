@@ -58,6 +58,9 @@ for startSample = 0:100:200
     [coordinator, output] = feedSignal(coordinator, startSample);
 end
 assert(strcmp(output.state, 'LOCKED'));
+% This test isolates health-window hysteresis from the production
+% submission cadence introduced by the bounded-history adapter.
+coordinator.decoderState.incremental.minAdvanceSec = 0.1;
 nextStart = 300;
 end
 

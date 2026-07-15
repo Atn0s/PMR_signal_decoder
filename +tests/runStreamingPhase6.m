@@ -3,8 +3,28 @@ function runStreamingPhase6()
 testOverlapLedger();
 testRingOverrunIsExplicitFailure();
 testSemanticDedupCanBeDisabled();
+testCompactIncrementalWorkerInput();
+testMinimumAdvanceAdmission();
 testFiveRealProtocols();
 fprintf('Streaming phase-6 continuous decoder tests passed.\n');
+end
+
+function testMinimumAdvanceAdmission()
+fs = 1000;
+epoch = radio.stream.newEpoch(1, 34, 1, 0);
+state = radio.stream.lockedDecoderInit('DMR', epoch, fs, ...
+    'LastProcessedEndSample', 0, ...
+    'DecodeFcn', @tests.fakeLockedDecoder);
+buffer = radio.stream.ringBufferInit(fs, 2);
+[buffer, ~] = radio.stream.ringBufferPush(buffer, ...
+    radio.stream.makeIqChunk(complex(zeros(249, 1)), fs, 0));
+[ready, newCount, minimumCount] = ...
+    radio.stream.lockedDecoderReady(state, buffer);
+assert(~ready && newCount == uint64(249));
+assert(minimumCount == uint64(250));
+[buffer, ~] = radio.stream.ringBufferPush(buffer, ...
+    radio.stream.makeIqChunk(complex(0), fs, 249));
+assert(radio.stream.lockedDecoderReady(state, buffer));
 end
 
 function testRingOverrunIsExplicitFailure()
@@ -65,8 +85,27 @@ assert(strcmp(repeated.errorReason, 'no_new_samples'));
 [state, second] = radio.stream.lockedDecoderProcess(state, buffer);
 assert(second.newPduCount == 1);
 assert(sourceSamples(second.newPdus) == uint64(300));
+assert(second.incremental && second.newInputSampleCount == 100);
+assert(second.historySampleCount == 400);
 assert(state.decodeCount == uint64(2));
 assert(numel(unique(state.seenKeys)) == numel(state.seenKeys));
+end
+
+function testCompactIncrementalWorkerInput()
+fs = 1000;
+epoch = radio.stream.newEpoch(1, 33, 1, 0);
+state = radio.stream.lockedDecoderInit('DMR', epoch, fs, ...
+    'LastProcessedEndSample', 7900, ...
+    'DecodeFcn', @tests.fakeLockedDecoder);
+buffer = radio.stream.ringBufferInit(fs, 8);
+[buffer, ~] = radio.stream.ringBufferPush(buffer, ...
+    radio.stream.makeIqChunk(complex(zeros(8000, 1)), fs, 0));
+input = radio.stream.lockedDecoderPrepareInput(state, buffer);
+assert(numel(input.chunk.iq) == 100);
+assert(numel(input.chunk.iq) < buffer.capacitySamples / 10);
+[state, output] = radio.stream.lockedDecoderProcessChunk(state, input); %#ok<ASGLU>
+assert(output.newInputSampleCount == 100);
+assert(state.lastProcessedEndSample == uint64(8000));
 end
 
 function samples = sourceSamples(pdus)
@@ -101,9 +140,21 @@ for k = 1:size(cases, 1)
     epoch = radio.stream.newEpoch(1, 40 + k, 1, uint64(base));
     state = radio.stream.lockedDecoderInit(protocol, epoch, fs, ...
         'LastProcessedEndSample', uint64(base));
-    [state, first] = radio.stream.lockedDecoderProcess(state, buffer);
-    assert(strcmp(first.health.status, 'confirmed'));
-    assert(first.newPduCount > 0);
+    firstPdus = struct([]);
+    first = [];
+    maxPasses = max(2, ceil(initialCount / max(1, round( ...
+        state.incremental.minAdvanceSec * fs))) + 2);
+    for pass = 1:maxPasses
+        [state, first] = radio.stream.lockedDecoderProcess(state, buffer);
+        firstPdus = appendPdus(firstPdus, first.newPdus);
+        if strcmp(first.health.status, 'confirmed'), break; end
+        if state.lastProcessedEndSample >= buffer.endSample, break; end
+    end
+    assert(strcmp(first.health.status, 'confirmed'), ...
+        '%s incremental initial backlog ended as %s (%s).', protocol, ...
+        first.health.status, first.errorReason);
+    assert(~isempty(firstPdus), ...
+        '%s incremental initial backlog emitted no PDU.', protocol);
 
     secondChunk = radio.stream.makeIqChunk( ...
         iq(base+initialCount+1:base+initialCount+extraCount), fs, ...
@@ -111,9 +162,14 @@ for k = 1:size(cases, 1)
     [buffer, ~] = radio.stream.ringBufferPush(buffer, secondChunk);
     [~, second] = radio.stream.lockedDecoderProcess(state, buffer);
     assert(~strcmp(second.status, 'error'));
-    allKeys = [keysFor(first.newPdus, fs), keysFor(second.newPdus, fs)];
+    allKeys = [keysFor(firstPdus, fs), keysFor(second.newPdus, fs)];
     assert(numel(unique(allKeys)) == numel(allKeys));
 end
+end
+
+function value = appendPdus(value, items)
+if isempty(items), return; end
+if isempty(value), value = items; else, value = [value(:); items(:)]; end
 end
 
 function keys = keysFor(pdus, fs)

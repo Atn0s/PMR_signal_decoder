@@ -16,32 +16,34 @@ if chunk.discontinuity
     output.discontinuity = true;
 end
 
+% The spectrum is a best-effort display consumer.  Keep only the newest
+% FFT frame and execute one FFT per published display update instead of
+% transforming every non-overlapping frame received from the producer.
+% This bounds CPU use independently of input bandwidth and intentionally
+% drops obsolete PSD work while preserving every IQ sample for decoding.
 samples = [state.fftRemainder; double(chunk.iq(:))];
-segmentCount = floor(numel(samples) / state.nfft);
-usedCount = segmentCount * state.nfft;
-if segmentCount > 0
-    segments = reshape(samples(1:usedCount), state.nfft, segmentCount);
-    spectrum = fftshift(fft(segments .* state.window, ...
-        state.nfft, 1), 1);
-    powerSum = sum(abs(spectrum) .^ 2, 2) ./ state.normalization;
-    state.intervalPowerSum = state.intervalPowerSum + double(powerSum);
-    state.intervalSegmentCount = state.intervalSegmentCount + ...
-        uint64(segmentCount);
-    state.segmentCount = state.segmentCount + uint64(segmentCount);
+if numel(samples) > state.nfft
+    state.fftRemainder = samples(end-state.nfft+1:end);
+else
+    state.fftRemainder = samples;
 end
-state.fftRemainder = samples(usedCount+1:end);
 state.samplesSinceUpdate = state.samplesSinceUpdate + ...
     uint64(numel(chunk.iq));
 state.inputSampleCount = state.inputSampleCount + uint64(numel(chunk.iq));
 state.lastSourceSampleEnd = chunk.sourceSampleEnd;
 
 if state.samplesSinceUpdate < state.updateSamples || ...
-        state.intervalSegmentCount == 0
+        numel(state.fftRemainder) < state.nfft
     return;
 end
 
-currentPsd = state.intervalPowerSum ./ ...
-    double(state.intervalSegmentCount);
+values = state.fftRemainder(end-state.nfft+1:end);
+spectrum = fftshift(fft(values .* state.window, state.nfft));
+currentPsd = abs(spectrum) .^ 2 ./ state.normalization;
+state.intervalPowerSum = double(currentPsd);
+state.intervalSegmentCount = uint64(1);
+state.segmentCount = state.segmentCount + uint64(1);
+state.fftExecutionCount = state.fftExecutionCount + uint64(1);
 if state.hasEstimate
     alpha = state.config.averageAlpha;
     state.averagePsd = (1 - alpha) .* state.averagePsd + ...

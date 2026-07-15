@@ -4,7 +4,7 @@
 > `channelizerFeed.m`。当前采用 `hop=N/2` 的 2 倍过采样 WOLA/PFB，并增加了
 > 绝对窗口起点相位去旋转，使 FFT 通道输出能够作为跨 Chunk 连续的子带 IQ。
 > 60 MHz 系统参数、检测和调度设计见
-> [docs/60MHz宽带实时IQ信道化与并行解码设计.md](docs/60MHz宽带实时IQ信道化与并行解码设计.md)。
+> [60 MHz 宽带实时 IQ 信道化与并行解码设计](docs/architecture/60MHz宽带实时IQ信道化与并行解码设计.md)。
 
 ## 1. 核心结论
 

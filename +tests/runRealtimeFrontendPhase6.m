@@ -29,6 +29,9 @@ app = radio_live_frontend('Visible', 'off', 'DefaultFile', path, ...
     'WarmParallelPool', false, ...
     'PrintToCommandWindow', false);
 appCleanup = onCleanup(@() app.Close());
+liveTimers = timerfindall('Name', 'PMRLeanLiveReplay');
+assert(~isempty(liveTimers));
+assert(any(strcmp(get(liveTimers, 'ExecutionMode'), 'fixedRate')));
 app.StartPreview('StartTimer', false);
 previewState = app.Step(35);
 app.AddOffsetHz(offsetHz, 'Refine', true);
