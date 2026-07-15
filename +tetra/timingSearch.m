@@ -82,22 +82,42 @@ if isempty(dphi)
     err = zeros(0, 1);
     return;
 end
+searchValues = representativeTransitions(dphi, cfg);
 offsetGrid = (-pi/4):cfg.diffPhaseOffsetStepRad:(pi/4);
 bestScore = inf;
 offset = 0;
-err = zeros(size(dphi));
 for off = offsetGrid
-    e = nearestError(wrapToPiLocal(dphi - off), centers);
+    e = nearestError(wrapToPiLocal(searchValues - off), centers);
     score = median(abs(e));
     if score < bestScore
         bestScore = score;
         offset = off;
-        err = e;
     end
 end
+err = nearestError(wrapToPiLocal(dphi - offset), centers);
+end
+
+function values = representativeTransitions(values, cfg)
+maxCount = 8192;
+if isfield(cfg, 'diffPhaseSearchMaxTransitions')
+    maxCount = cfg.diffPhaseSearchMaxTransitions;
+end
+if ~isfinite(maxCount) || numel(values) <= maxCount
+    return;
+end
+indices = unique(round(linspace(1, numel(values), maxCount)));
+values = values(indices);
 end
 
 function err = nearestError(values, centers)
+% The four pi/4-DQPSK centers are uniformly spaced by pi/2.  Folding into
+% [-pi/4, pi/4) is exactly the nearest-center error and avoids constructing
+% an N-by-4 distance matrix for every phase-offset candidate.
+if numel(centers) == 4 && ...
+        max(abs(diff(centers(:)) - pi / 2)) < 10 * eps
+    err = mod(values(:), pi / 2) - pi / 4;
+    return;
+end
 dist = abs(wrapToPiLocal(values(:) - centers(:).'));
 [~, idx] = min(dist, [], 2);
 err = wrapToPiLocal(values(:) - centers(idx));

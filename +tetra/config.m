@@ -33,6 +33,10 @@ cfg.psdNperseg = 4096;
 cfg.channelSearchHalfWidthHz = 14000;
 cfg.timingPhaseStepSamples = 0.25;
 cfg.diffPhaseOffsetStepRad = pi / 180;
+% The phase-offset grid is a robust estimator; an evenly distributed subset
+% is sufficient for choosing the offset on long windows.  The selected
+% offset is still evaluated against every transition afterwards.
+cfg.diffPhaseSearchMaxTransitions = 8192;
 cfg.residualCorrectionMinHz = 3.0;
 cfg.residualCorrectionMaxHz = 2500.0;
 cfg.trainingMaxErrorFraction = 0.25;

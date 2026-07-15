@@ -3,6 +3,7 @@ function result = winnerCatchup(buffer, epoch, protocol, varargin)
 p = inputParser;
 p.addParameter('PreTriggerSec', radio.stream.defaultConfig().preTriggerSec);
 p.addParameter('EndSample', []);
+p.addParameter('Deduplicate', true);
 p.parse(varargin{:});
 protocol = radio.normalizeProtocolNames({protocol});
 protocol = protocol{1};
@@ -36,7 +37,9 @@ try
         radio.stream.decodeProtocolWindow(protocol, snapshot);
     pdus = radio.stream.stampStreamPdus( ...
         pdus, protocol, snapshot, epoch.epochId);
-    pdus = radio.deduplicatePdus(pdus);
+    if p.Results.Deduplicate
+        pdus = radio.deduplicatePdus(pdus);
+    end
     verdict = radio.stream.evaluateProbeEvidence(protocol, pdus, diagnostics);
     status = 'caught_up';
     errorReason = '';

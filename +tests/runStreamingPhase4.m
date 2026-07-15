@@ -10,9 +10,40 @@ end
 testUniqueAndAmbiguousResults();
 testStaleGenerationIsolation();
 testCancellation();
+testAsynchronousLockedDecoder();
 testWarmParallelTiming();
 testRealP25SerialParallelAgreement();
 fprintf('Streaming phase-4 parallel race tests passed.\n');
+end
+
+function testAsynchronousLockedDecoder()
+fs = 1000;
+epoch = radio.stream.newEpoch(1, 81, 3, 0);
+state = radio.stream.lockedDecoderInit('DMR', epoch, fs, ...
+    'LastProcessedEndSample', 0, ...
+    'DecodeFcn', @tests.fakeLockedDecoder, ...
+    'SemanticDeduplicate', false);
+buffer = radio.stream.ringBufferInit(fs, 2);
+[buffer, ~] = radio.stream.ringBufferPush(buffer, ...
+    radio.stream.makeIqChunk(complex(zeros(300, 1)), fs, 0));
+handle = radio.stream.lockedDecoderStart(state, buffer, ...
+    'Mode', 'parallel', 'NumWorkers', 5);
+assert(~handle.completed);
+submittedEnd = buffer.endSample;
+[buffer, ~] = radio.stream.ringBufferPush(buffer, ...
+    radio.stream.makeIqChunk(complex(zeros(100, 1)), fs, 300, ...
+    'SequenceNumber', 1));
+token = tic;
+status = struct('state', 'running');
+while toc(token) < 10
+    [handle, status] = radio.stream.lockedDecoderPoll(handle);
+    if handle.completed, break; end
+    pause(0.01);
+end
+assert(handle.completed && strcmp(status.state, 'completed'));
+assert(status.output.windowEndSample == submittedEnd);
+assert(status.output.windowEndSample < buffer.endSample);
+assert(status.output.newPduCount == 3);
 end
 
 function testSerialScheduler()

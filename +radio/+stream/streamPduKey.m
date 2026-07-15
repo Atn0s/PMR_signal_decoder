@@ -1,8 +1,12 @@
-function [key, isPersistent] = streamPduKey(pdu, sampleRateHz)
+function [key, isPersistent] = streamPduKey(pdu, sampleRateHz, varargin)
 %STREAMPDUKEY Build an overlap-stable, epoch-local streaming PDU key.
+p = inputParser;
+p.addParameter('SemanticDeduplicate', true);
+p.parse(varargin{:});
 semantic = jsonencode(radio.dedupKey(pdu));
 type = upper(char(radio.getField(pdu, 'type', '')));
-isPersistent = contains(type, 'CALL') || contains(type, 'SESSION');
+isPersistent = logical(p.Results.SemanticDeduplicate) && ...
+    (contains(type, 'CALL') || contains(type, 'SESSION'));
 if isPersistent
     key = ['persistent:', semantic];
     return;

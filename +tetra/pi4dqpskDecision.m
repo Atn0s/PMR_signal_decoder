@@ -4,6 +4,7 @@ p = inputParser;
 p.addParameter('Variant', 'standard');
 p.addParameter('PhaseOffsetRad', []);
 p.addParameter('PhaseOffsetStepRad', pi / 180);
+p.addParameter('PhaseOffsetMaxTransitions', 8192);
 p.addParameter('ValidTransitionMask', []);
 p.parse(varargin{:});
 
@@ -24,7 +25,9 @@ centerBits = [1 1; 1 0; 0 0; 0 1];
 
 phaseOffset = p.Results.PhaseOffsetRad;
 if isempty(phaseOffset)
-    phaseOffset = bestPhaseOffset(observed(valid), centers, p.Results.PhaseOffsetStepRad);
+    phaseOffset = bestPhaseOffset(observed(valid), centers, ...
+        p.Results.PhaseOffsetStepRad, ...
+        p.Results.PhaseOffsetMaxTransitions);
 end
 
 corrected = wrapToPiLocal(observed - phaseOffset);
@@ -75,10 +78,14 @@ switch lower(char(name))
 end
 end
 
-function offset = bestPhaseOffset(values, centers, step)
+function offset = bestPhaseOffset(values, centers, step, maxTransitions)
 if isempty(values)
     offset = 0;
     return;
+end
+if isfinite(maxTransitions) && numel(values) > maxTransitions
+    indices = unique(round(linspace(1, numel(values), maxTransitions)));
+    values = values(indices);
 end
 offsetGrid = (-pi/4):step:(pi/4);
 bestScore = inf;

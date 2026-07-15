@@ -4,8 +4,41 @@ testIqChunkContract();
 testRawFileSource();
 testRingBufferRanges();
 testActivityAndController();
+testAdaptiveNoiseRejectsLeadingSilence();
+testAdaptiveActivityIsTimeShiftInvariant();
 testDiscontinuityClosesEpoch();
 fprintf('Streaming phase-1 tests passed.\n');
+end
+
+function testAdaptiveNoiseRejectsLeadingSilence()
+fs = 125000;
+cfg = radio.stream.defaultConfig();
+savedRng = rng;
+rng(1107);
+noise = makeNoise(round(6.0 * fs), -47);
+rng(savedRng);
+[epochs, report] = radio.stream.detectActivityEpochs(noise, fs, ...
+    'Config', cfg);
+assert(~report.activitySeen);
+assert(isempty(epochs));
+end
+
+function testAdaptiveActivityIsTimeShiftInvariant()
+fs = 125000;
+cfg = radio.stream.defaultConfig();
+startsSec = [0, 1.5, 6.0];
+candidateSamples = zeros(size(startsSec), 'uint64');
+for k = 1:numel(startsSec)
+    iq = makeDelayedFsk(fs, startsSec(k), 0.8, 0.5, 2200 + k);
+    [epochs, report] = radio.stream.detectActivityEpochs(iq, fs, ...
+        'Config', cfg);
+    assert(report.activitySeen);
+    assert(numel(epochs) == 1);
+    candidateSamples(k) = epochs(1).candidateStartSample;
+    expected = uint64(round(startsSec(k) * fs));
+    assert(candidateSamples(k) == expected);
+end
+assert(isequal(double(candidateSamples) ./ fs, startsSec));
 end
 
 function testIqChunkContract()
@@ -134,6 +167,30 @@ cfg.activity.initialNoiseFloorDb = -40;
 cfg.activity.minOnSec = 0.05;
 cfg.activity.offHangSec = 0.06;
 cfg.activity.noiseUpdateAlpha = 0.05;
+end
+
+function iq = makeDelayedFsk(fs, leadingSec, activeSec, trailingSec, seed)
+savedRng = rng;
+rng(seed);
+count = round((leadingSec + activeSec + trailingSec) * fs);
+iq = makeNoise(count, -47);
+activeStart = round(leadingSec * fs) + 1;
+activeCount = round(activeSec * fs);
+n = (0:activeCount-1).';
+symbolIndex = floor(n .* 4800 ./ fs) + 1;
+levels = [-1800; -600; 600; 1800];
+symbols = levels(randi(4, symbolIndex(end), 1));
+instantaneousHz = symbols(symbolIndex);
+carrier = sqrt(10 ^ (-30 / 10)) .* ...
+    exp(1i .* cumsum(2 .* pi .* instantaneousHz ./ fs));
+iq(activeStart:activeStart + activeCount - 1) = ...
+    iq(activeStart:activeStart + activeCount - 1) + carrier;
+rng(savedRng);
+end
+
+function iq = makeNoise(count, powerDb)
+scale = sqrt(10 ^ (powerDb / 10) / 2);
+iq = scale .* (randn(count, 1) + 1i .* randn(count, 1));
 end
 
 function assertThrows(fn, identifier)

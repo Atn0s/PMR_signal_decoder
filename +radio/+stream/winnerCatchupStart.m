@@ -5,6 +5,7 @@ p.addParameter('Mode', 'auto');
 p.addParameter('NumWorkers', 5);
 p.addParameter('PoolType', 'auto');
 p.addParameter('PreTriggerSec', radio.stream.defaultConfig().preTriggerSec);
+p.addParameter('Deduplicate', true);
 p.parse(varargin{:});
 
 protocol = radio.normalizeProtocolNames({protocol});
@@ -27,7 +28,8 @@ mode = lower(char(p.Results.Mode));
 if strcmp(mode, 'serial')
     handle.mode = 'serial';
     handle.result = radio.stream.winnerCatchup(buffer, epoch, protocol, ...
-        'PreTriggerSec', p.Results.PreTriggerSec);
+        'PreTriggerSec', p.Results.PreTriggerSec, ...
+        'Deduplicate', p.Results.Deduplicate);
     handle.completed = true;
     handle.elapsedSec = toc(handle.timerToken);
     return;
@@ -43,7 +45,8 @@ if isempty(pool)
     handle.mode = 'serial_fallback';
     handle.fallbackReason = info.reason;
     handle.result = radio.stream.winnerCatchup(buffer, epoch, protocol, ...
-        'PreTriggerSec', p.Results.PreTriggerSec);
+        'PreTriggerSec', p.Results.PreTriggerSec, ...
+        'Deduplicate', p.Results.Deduplicate);
     handle.completed = true;
     handle.elapsedSec = toc(handle.timerToken);
     return;
@@ -51,5 +54,7 @@ end
 
 handle.mode = 'parallel';
 handle.future = parfeval(pool, @radio.stream.winnerCatchup, 1, ...
-    buffer, epoch, protocol, 'PreTriggerSec', p.Results.PreTriggerSec);
+    buffer, epoch, protocol, ...
+    'PreTriggerSec', p.Results.PreTriggerSec, ...
+    'Deduplicate', p.Results.Deduplicate);
 end

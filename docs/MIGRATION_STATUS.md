@@ -82,3 +82,29 @@ Still outside this migration slice:
   per-candidate protocol race now exists under `+radio/+wideband`, but its
   61.44 MS/s CPU path is not yet real time.
 - Full okdmr-equivalent DMR FEC/CSBK/link-control coverage.
+
+## 2026-07-15 Live Spectrum Selection Frontend
+
+Implemented as a file-replay correctness frontend.
+
+- Added `radio_frontend.m` with live Average/Max Hold spectrum, bounded
+  waterfall history, click-to-refine carrier selection, replay controls,
+  decoder state, Epoch/winner display, live PDU table, and JSON export.
+- Added pull-based `+radio/+replay` sources for single pass, synthetic
+  continuous replay, and independent-Epoch repetition on a monotonic sample
+  timeline.
+- Added reusable incremental `+radio/+scope` processing without retaining
+  wideband IQ history.
+- Added streaming known-carrier DDC-to-`RaceCoordinator` integration and a
+  100 ms baseband micro-batcher so short TDMA bursts retain the established
+  activity-detection semantics.
+- Added finite-source task draining: EOF waits for asynchronous protocol and
+  catch-up work, while explicit Stop cancels promptly.
+- Synthetic GUI/controller tests and real `DMR_signal/1.bvsp` tests pass in
+  DMR-serial and five-process race modes; both decode `LATE_ENTRY` and
+  `DMR_CALL`.
+
+This is still a single-selected-carrier, pull-based offline frontend. A real
+SDR source, bounded producer/consumer queue, hardware timestamps, overflow
+policy, and accelerated real-time 61.44 MS/s implementation remain future
+hardware-integration work.

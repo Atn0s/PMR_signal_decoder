@@ -6,6 +6,10 @@ configuration block at the top, and click Run.
 ## Script Entrypoints
 
 - `scanner.m`: unified DMR/P25/dPMR/NXDN/TETRA scanner.
+- `radio_live_frontend.m`: lean 1x multi-carrier file-replay frontend.
+- `radio_frontend.m`: live file-replay spectrum, click-to-tune, and streaming
+  five-protocol race UI.
+- `carrier_scope.m`: static offline spectrum and carrier-hint viewer.
 - `dmr_cli.m`: DMR-only scanner.
 - `p25_cli.m`: P25-only scanner.
 - `dpmr_cli.m`: dPMR-only scanner.
@@ -13,6 +17,81 @@ configuration block at the top, and click Run.
 - `nxdn96_cli.m`: standalone NXDN96 data-PDU diagnostic decoder.
 - `examples/tetra/tetra_full_file_scan.m`: TETRA-only full-file multi-window scan.
 - `open_radio_analyzer.m`: opens the interactive analyzer UI.
+
+## Live Spectrum Selection Frontend
+
+For the current 1x multi-carrier path, start:
+
+```matlab
+startup
+radio_live_frontend
+```
+
+The normal interactive sequence is:
+
+1. Open a BVSP, interleaved raw IQ, or stereo IQ WAV capture.
+2. For headerless raw IQ, enter `Fs`; RF center is optional.
+3. Click **Preview 1x** and wait for the live spectrum.
+4. Click each carrier peak that should get an independent decoder path.
+5. Click **Run decode**.
+6. Watch immediate `SIGNAL_ON`, `LOCK`, and PDU records in the event console.
+7. Click **Clear carriers** at any time to detach the decoder while the PSD
+   and file replay continue from the current sample.
+
+The first **Preview 1x** call deliberately prepares the process pool and five
+reusable zero-IF DDC slots before starting the PSD. This one-time preparation
+is shown as `PREPARING`. **Run decode** then retargets those slots in place: it
+does not close, rewind, or reopen the capture and does not reset the spectrum.
+
+BVSP supplies both sample rate and RF center from its header. RF center is
+used for display and metadata only; DDC uses the selected relative offset, so
+an unknown RF center does not prevent decoding a raw baseband capture.
+
+Replay modes:
+
+- `once`: one deterministic pass, then DDC/task/Epoch finalization;
+- `continuous-test`: concatenate file repetitions on one monotonic logical
+  timeline, useful when a short sample must satisfy a long probe window;
+- `epoch-repeat`: insert silence and a discontinuity between repetitions so
+  each copy is reported as an independent RF Epoch.
+
+The lean frontend uses a 100 ms fixed playout delay and advances the file at
+wall-clock 1x. Protocol work is asynchronous; input lag and maximum lag are
+shown explicitly. It does not silently slow the producer to hide decoder
+overload. The older `radio_frontend` remains available for single-carrier
+waterfall/table diagnostics.
+
+Programmatic/automated use is also supported:
+
+```matlab
+app = radio_live_frontend( ...
+    'Visible', 'off', ...
+    'DefaultFile', '/path/to/capture.bvsp', ...
+    'ReplayMode', 'once', ...
+    'ProtocolNames', {}, ...             % all five protocols
+    'ParallelMode', 'parallel');
+cleanup = onCleanup(@() app.Close());
+
+app.StartPreview('StartTimer', false);
+app.Step(8);                              % preview blocks
+app.AddOffsetHz(-300e3, 'Refine', false);
+app.AddOffsetHz(+150e3, 'Refine', false);
+app.AddOffsetHz(+600e3, 'Refine', false);
+app.RunIdentification('StartTimer', false);
+state = app.Step(500);
+disp(state.scanner.selectedProtocols)
+disp({state.pdus.type})
+```
+
+With a real process-pool race, normal timer-driven replay is preferred over a
+tight `Step` loop because it gives asynchronous probe/catch-up workers wall
+time to finish. EOF finalization now waits for active tasks; manual **Stop**
+uses quick cancellation.
+
+The lean frontend processes multiple manually selected carriers concurrently;
+it does not run PFB discovery. The correction and 2.5 MHz three-carrier 1x
+acceptance record is in
+`docs/2.5MHz一倍速多载波并行前端修正与验收记录.md`.
 
 Typical edit:
 
@@ -48,8 +127,9 @@ BLIND_SEARCH = false;
 SHOW_FIGURE = false;
 ```
 
-This path reads the wideband file in 10 ms blocks, performs stateful NCO down
-conversion plus anti-alias filtering, decimates to 120 kS/s, and then uses the
+This path reads the wideband file in blocks, performs stateful NCO down
+conversion plus anti-alias filtering, decimates to an integer-compatible
+rate (120 kS/s for 61.44 MS/s, 125 kS/s for 2.5 MS/s), and then uses the
 existing multi-Epoch five-protocol race. The current phase accepts one carrier;
 it does not perform carrier discovery or time cropping.
 
@@ -191,8 +271,9 @@ offline protocol-race integration is available through
 `ExecutionMode='parallel'` for a single already-centered baseband file. A
 single known carrier in a wideband file can now use
 `ExecutionMode='tuned-parallel'`; nonzero single-element `FreqList` also routes
-there automatically. Neither path performs PSD carrier discovery,
-multiple-frequency scheduling, or direct SDR acquisition. The broader
+there automatically. `scanner.m` still accepts one tuned `FreqList` value;
+`radio_live_frontend` and `radio.tuned.multiStreamScanner*` provide manual
+multiple-frequency scheduling. None performs direct SDR acquisition. The broader
 streaming design and exact blind-search behavior
 are recorded in:
 
@@ -203,6 +284,7 @@ docs/离线基带并行接入scanner实现记录.md
 docs/离线多Epoch识别与上报实现记录.md
 docs/已知载频DDC过渡模块实现记录.md
 docs/实时频谱选频与循环回放解码前端设计.md
+docs/2.5MHz一倍速多载波并行前端修正与验收记录.md
 ```
 
 ## JSON Output

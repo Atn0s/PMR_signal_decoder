@@ -1,8 +1,43 @@
 function runStreamingPhase6()
 %RUNSTREAMINGPHASE6 Test bounded-overlap locked decoding and PDU ledger.
 testOverlapLedger();
+testRingOverrunIsExplicitFailure();
+testSemanticDedupCanBeDisabled();
 testFiveRealProtocols();
 fprintf('Streaming phase-6 continuous decoder tests passed.\n');
+end
+
+function testRingOverrunIsExplicitFailure()
+fs = 1000;
+epoch = radio.stream.newEpoch(1, 32, 4, 0);
+state = radio.stream.lockedDecoderInit('DMR', epoch, fs, ...
+    'LastProcessedEndSample', 0, ...
+    'DecodeFcn', @tests.fakeLockedDecoder);
+buffer = radio.stream.ringBufferInit(fs, 0.2);
+[buffer, ~] = radio.stream.ringBufferPush(buffer, ...
+    radio.stream.makeIqChunk(complex(zeros(300, 1)), fs, 0));
+[state, output] = radio.stream.lockedDecoderProcess(state, buffer); %#ok<ASGLU>
+assert(strcmp(output.status, 'error'));
+assert(strcmp(output.errorReason, 'locked_decoder_input_overrun'));
+assert(output.overrunSamples == uint64(100));
+assert(output.newPduCount == 0);
+end
+
+function testSemanticDedupCanBeDisabled()
+fs = 1000;
+pdu1 = struct('protocol', 'DMR', 'type', 'DMR_CALL', ...
+    'src', 10, 'dst', 20, 'ts', 1, 'flco', '', 'fid', '', ...
+    'extra', struct('stream', struct('source_sample', uint64(100))));
+pdu2 = pdu1;
+pdu2.extra.stream.source_sample = uint64(200);
+[semantic1, persistent1] = radio.stream.streamPduKey(pdu1, fs);
+[semantic2, persistent2] = radio.stream.streamPduKey(pdu2, fs);
+assert(persistent1 && persistent2 && strcmp(semantic1, semantic2));
+[timed1, persistent1] = radio.stream.streamPduKey( ...
+    pdu1, fs, 'SemanticDeduplicate', false);
+[timed2, persistent2] = radio.stream.streamPduKey( ...
+    pdu2, fs, 'SemanticDeduplicate', false);
+assert(~persistent1 && ~persistent2 && ~strcmp(timed1, timed2));
 end
 
 function testOverlapLedger()

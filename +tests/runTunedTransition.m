@@ -2,7 +2,42 @@ function runTunedTransition()
 %RUNTUNEDTRANSITION Deterministic known-carrier DDC transition tests.
 testHeaderedRawExtraction();
 testValidation();
+testRuntimeRateResolution();
+testReusableExternalMixer();
 fprintf('Known-carrier tuned-transition tests passed.\n');
+end
+
+function testReusableExternalMixer()
+fs = 240000;
+offsetHz = 40000;
+cfg = radio.tuned.defaultConfig();
+ddc = radio.tuned.ddcInit(fs, 0, 'Config', cfg, ...
+    'MixerMode', 'external');
+ddc.converter(complex(zeros(ddc.inputBlockSamples, 1)));
+reset(ddc.converter);
+ddc = radio.tuned.ddcRetarget(ddc, offsetHz, ...
+    'InputCenterFrequencyHz', 10e6, 'ChannelId', 3);
+n = (0:round(0.1 * fs)-1).';
+iq = 0.3 .* exp(1i .* 2 .* pi .* offsetHz .* n ./ fs);
+chunk = radio.stream.makeIqChunk(iq, fs, uint64(50000), ...
+    'CenterFrequencyHz', 10e6);
+[ddc, output] = radio.tuned.ddcFeed(ddc, chunk);
+assert(strcmp(ddc.mixerMode, 'external'));
+assert(output.channelId == 3);
+assert(output.centerFrequencyHz == 10e6 + offsetHz);
+steady = output.iq(2401:4800);
+carrier = mean(steady);
+assert(abs(carrier) > 0.20);
+assert(rms(steady - carrier) < 0.01);
+end
+
+function testRuntimeRateResolution()
+cfg = radio.tuned.defaultConfig();
+[resolved, report] = radio.tuned.resolveInputConfig(61.44e6, cfg);
+assert(~report.adapted && resolved.outputSampleRateHz == 120000);
+[resolved, report] = radio.tuned.resolveInputConfig(2.5e6, cfg);
+assert(report.adapted && resolved.outputSampleRateHz == 125000);
+assert(report.decimationFactor == 20);
 end
 
 function testHeaderedRawExtraction()

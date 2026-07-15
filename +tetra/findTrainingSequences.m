@@ -28,15 +28,8 @@ for k = 1:numel(seqs)
     bestOffset = NaN;
     errorsByOffset = zeros(0, 1);
     if numel(bits) >= L
-        errorsByOffset = zeros(numel(bits) - L + 1, 1);
-        for pos = 1:(numel(bits) - L + 1)
-            err = nnz(bits(pos:pos + L - 1) ~= seqBits);
-            errorsByOffset(pos) = err;
-            if err < bestErrors
-                bestErrors = err;
-                bestOffset = pos;
-            end
-        end
+        errorsByOffset = hammingDistanceByOffset(bits, seqBits);
+        [bestErrors, bestOffset] = min(errorsByOffset);
     end
     frac = bestErrors / L;
     isGood = frac <= cfg.trainingGoodErrorFraction;
@@ -69,6 +62,22 @@ report.score = score;
 report.goodCount = nnz([items.isGood]);
 report.candidateCount = nnz([items.isCandidate]);
 report.hitCount = numel(hits);
+end
+
+function errors = hammingDistanceByOffset(bits, seqBits)
+% XOR distance can be written as sum(x)+sum(s)-2*dot(x,s).  Computing the
+% two sliding terms with compiled convolution avoids a MATLAB loop over up
+% to hundreds of thousands of TETRA bit offsets while remaining exactly
+% equivalent to nnz(bits(pos:pos+L-1) ~= seqBits).
+x = double(bits(:));
+s = double(seqBits(:));
+L = numel(s);
+windowOnes = conv(x, ones(L, 1), 'valid');
+matchedOnes = conv(x, flipud(s), 'valid');
+errors = windowOnes + sum(s) - 2 .* matchedOnes;
+% Round away floating-point convolution noise so threshold comparisons and
+% tie ordering retain the original integer Hamming-distance semantics.
+errors = round(errors);
 end
 
 function hits = collectHits(errorsByOffset, seq, cfg)

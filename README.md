@@ -21,11 +21,32 @@ startup
 scanner
 ```
 
+To replay a 2.5 MHz capture at 1x, select one or more carriers, and run an
+independent five-protocol race for every selected carrier:
+
+```matlab
+radio_live_frontend
+```
+
+`radio_live_frontend` is the lean 1x path: live PSD, multi-click carrier
+selection, independent DDC/Epoch/race state, and immediate signal/PDU output.
+`radio_frontend` remains the single-carrier diagnostic UI with Max Hold,
+waterfall and a PDU table. Both accept BVSP, interleaved raw IQ, and stereo IQ
+WAV input.
+
+To generate the deterministic 2.5 MHz, five-protocol near-synchronous stress
+fixture, run `synthesizeFiveSignal2p5MHz('Overwrite', true)`.  The opt-in
+real-data acceptance entry point is `tests.runFiveSignal2p5MHzAcceptance`; see
+`docs/2.5MHz五路近同步信号合成与验收.md` for the scenario and current limits.
+
 For the click-to-run workflow, open one of these top-level scripts, edit
 `TARGET_FILE`, then click Run:
 
 ```text
 scanner.m
+radio_live_frontend.m
+radio_frontend.m
+carrier_scope.m
 dmr_cli.m
 p25_cli.m
 dpmr_cli.m
@@ -113,6 +134,9 @@ The Python project root is resolved from:
 ```text
 +common/      IQ IO, sample-rate detection, DSP helpers
 +radio/       pipeline, registry, PDU formatting and JSON output
++radio/+replay/ looped pull-based file source
++radio/+scope/  incremental spectrum, waterfall, and carrier refinement
++radio/+tuned/  known-carrier streaming DDC and race adapter
 +dmr/         DMR config/frontend/formatting adapter
 +p25/         P25 config/frontend/formatting adapter
 +dpmr/        dPMR config/frontend/formatting adapter

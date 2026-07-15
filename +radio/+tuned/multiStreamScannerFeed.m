@@ -1,0 +1,49 @@
+function [scanner, output] = multiStreamScannerFeed(scanner, widebandChunk)
+%MULTISTREAMSCANNERFEED Send one input block to every selected carrier.
+if scanner.finalized
+    error('radio:tuned:multiStreamScannerFeed:Finalized', ...
+        'A finalized multi-carrier scanner cannot accept more input.');
+end
+radio.stream.validateIqChunk(widebandChunk);
+if widebandChunk.sampleRateHz ~= scanner.inputSampleRateHz
+    error('radio:tuned:multiStreamScannerFeed:SampleRate', ...
+        'Wideband input sample rate changed.');
+end
+if widebandChunk.centerFrequencyHz ~= scanner.inputCenterFrequencyHz
+    error('radio:tuned:multiStreamScannerFeed:CenterFrequency', ...
+        'Retuning requires a new multi-carrier scanner.');
+end
+
+channelOutputs = cell(scanner.channelCount, 1);
+newPdus = struct([]);
+closedEpochs = repmat(radio.stream.newEpoch(0, 0, 0, 0), 0, 1);
+for k = 1:scanner.channelCount
+    [scanner.channels{k}, channelOutputs{k}] = ...
+        radio.tuned.streamScannerFeed(scanner.channels{k}, widebandChunk);
+    newPdus = appendStruct(newPdus, channelOutputs{k}.newPdus);
+    closedEpochs = appendStruct( ...
+        closedEpochs, channelOutputs{k}.closedEpochs);
+end
+scanner.pdus = appendStruct(scanner.pdus, newPdus);
+scanner.closedEpochs = appendStruct(scanner.closedEpochs, closedEpochs);
+scanner.lastOutputs = channelOutputs;
+scanner.feedCount = scanner.feedCount + uint64(1);
+scanner.inputSampleCount = scanner.inputSampleCount + ...
+    uint64(numel(widebandChunk.iq));
+
+output = struct( ...
+    'channelOutputs', {channelOutputs}, ...
+    'states', {cellfun(@(item) item.state, channelOutputs, ...
+        'UniformOutput', false)}, ...
+    'selectedProtocols', {cellfun(@(item) item.selectedProtocol, ...
+        channelOutputs, 'UniformOutput', false)}, ...
+    'newPdus', newPdus, ...
+    'closedEpochs', closedEpochs, ...
+    'feedCount', scanner.feedCount, ...
+    'inputSampleCount', scanner.inputSampleCount);
+end
+
+function value = appendStruct(value, items)
+if isempty(items), return; end
+if isempty(value), value = items(:); else, value = [value(:); items(:)]; end
+end

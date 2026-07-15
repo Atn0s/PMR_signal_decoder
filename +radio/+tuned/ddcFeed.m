@@ -21,12 +21,26 @@ if isFirst || resetNow
     state.pendingSourceSampleStart = inputChunk.sourceSampleStart;
     state.nextOutputSample = uint64(floor( ...
         double(inputChunk.sourceSampleStart) / state.decimationFactor));
+    if strcmp(state.mixerMode, 'external')
+        state.mixerPhase = complex(1);
+    end
 end
 
 if isempty(state.pendingIq)
     state.pendingSourceSampleStart = inputChunk.sourceSampleStart;
 end
-state.pendingIq = [state.pendingIq; double(inputChunk.iq(:))];
+inputIq = double(inputChunk.iq(:));
+if strcmp(state.mixerMode, 'external') && ~isempty(inputIq)
+    oscillator = complex(ones(numel(inputIq), 1));
+    if numel(inputIq) > 1
+        oscillator(2:end) = cumprod(repmat( ...
+            state.mixerStep, numel(inputIq) - 1, 1));
+    end
+    oscillator = state.mixerPhase .* oscillator;
+    inputIq = inputIq .* oscillator;
+    state.mixerPhase = oscillator(end) .* state.mixerStep;
+end
+state.pendingIq = [state.pendingIq; inputIq];
 state.inputSamplesReceived = state.inputSamplesReceived + ...
     uint64(numel(inputChunk.iq));
 state.expectedInputSample = inputChunk.sourceSampleEnd;
