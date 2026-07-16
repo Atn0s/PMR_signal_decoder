@@ -31,4 +31,8 @@ cfg.voiceSyncCandidateLimit = 100;
 cfg.voiceSymbolCandidateLimit = 8;
 cfg.dedupFrameBucketSamples = 3840;
 cfg.stableColorMinRepeats = 2;
+cfg.streamDcTimeConstantSec = 0.25;
+cfg.streamFrequencyEstimateSec = 1.0;
+cfg.streamFlushPaddingSec = 0.010;
+cfg.streamSeenKeyLimit = 512;
 end

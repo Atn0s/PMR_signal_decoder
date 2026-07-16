@@ -45,7 +45,7 @@ end
 % and the five process workers remain available for protocol races and the
 % four legacy locked decoders.  The persistent process actor below remains
 % a fallback for environments where the background task cannot be queued.
-if persistentNxdnEligible(state) && ...
+if nativeNxdnThreadEligible(state) && ...
         state.sampleRateHz == 120000 && isempty(state.actor)
     try
         handle.mode = 'background_worker';
@@ -73,7 +73,8 @@ if isempty(pool)
 end
 
 handle.mode = 'parallel';
-if persistentNxdnEligible(state)
+if radio.stream.lockedDecoderActorEligible(state) && ...
+        ~isa(pool, 'parallel.ThreadPool')
     try
         if isempty(state.actor)
             submitToken = tic;
@@ -109,7 +110,7 @@ handle.future = parfeval(pool, @radio.stream.lockedDecoderProcessChunk, 2, ...
 handle.submitElapsedSec = toc(submitToken);
 end
 
-function tf = persistentNxdnEligible(state)
+function tf = nativeNxdnThreadEligible(state)
 tf = strcmp(state.protocol, 'NXDN') && isempty(state.decodeFcn) && ...
     isfield(state, 'incremental') && ...
     isfield(state.incremental, 'nativeStreaming') && ...

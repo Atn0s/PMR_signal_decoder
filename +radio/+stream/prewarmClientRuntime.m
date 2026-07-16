@@ -46,6 +46,7 @@ try
             handle, 'Reason', 'client_runtime_prewarm_timeout'); %#ok<ASGLU>
         report.errorReason = 'client_runtime_prewarm_timeout';
     else
+        prewarmPersistentActorWorkers(pool, p.Results.TimeoutSec);
         if any(strcmp(protocolNames, 'NXDN'))
             prewarmNxdnLockedPath( ...
                 pool, p.Results.PoolType, p.Results.TimeoutSec);
@@ -58,6 +59,61 @@ catch ME
     report.errorReason = sprintf('%s: %s', ME.identifier, ME.message);
 end
 report.elapsedSec = toc(token);
+end
+
+function prewarmPersistentActorWorkers(pool, timeoutSec)
+% Occupy every process worker once so actor-loop JIT, queue handshakes, and
+% task placement are paid before preview starts rather than after LOCKED.
+count = pool.NumWorkers;
+actors = cell(count, 1);
+for k = 1:count
+    epoch = radio.stream.newEpoch(k, 0, 0, 0);
+    state = radio.stream.lockedDecoderInit( ...
+        'DMR', epoch, 1000, 'LastProcessedEndSample', uint64(0));
+    input = struct('chunk', [], 'availableEndSample', uint64(0), ...
+        'targetEndSample', uint64(0), 'overrunSamples', uint64(0));
+    actors{k} = radio.stream.lockedDecoderActorStart(pool, state, input);
+end
+completed = false(count, 1);
+token = tic;
+while ~all(completed) && toc(token) < timeoutSec
+    for k = 1:count
+        if completed(k), continue; end
+        [actors{k}, event] = ...
+            radio.stream.lockedDecoderActorPoll(actors{k});
+        completed(k) = event.completed && strcmp(event.state, 'completed');
+    end
+    if ~all(completed), pause(0.005); end
+end
+if ~all(completed)
+    stopActors(actors);
+    error('radio:stream:prewarmClientRuntime:ActorFleetTimeout', ...
+        'Persistent actor fleet prewarm timed out.');
+end
+taskIds = cellfun(@(actor) actor.workerTaskId, actors);
+if numel(unique(taskIds(taskIds > 0))) ~= count
+    stopActors(actors);
+    error('radio:stream:prewarmClientRuntime:ActorFleetPlacement', ...
+        'Persistent actor prewarm did not visit every process worker.');
+end
+stopActors(actors);
+token = tic;
+while toc(token) < min(5, timeoutSec)
+    finished = cellfun(@(actor) ...
+        strcmp(char(actor.future.State), 'finished'), actors);
+    if all(finished), return; end
+    pause(0.005);
+end
+error('radio:stream:prewarmClientRuntime:ActorFleetStop', ...
+    'Persistent actor fleet did not release all process workers.');
+end
+
+function stopActors(actors)
+for k = 1:numel(actors)
+    if ~isempty(actors{k})
+        actors{k} = radio.stream.lockedDecoderActorStop(actors{k});
+    end
+end
 end
 
 function prewarmNxdnLockedPath(pool, poolType, timeoutSec)

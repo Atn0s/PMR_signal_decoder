@@ -24,6 +24,19 @@ tetraPdu.extra = struct('start_time_s', 0.02);
 stamped = radio.stream.stampStreamPdus(tetraPdu, 'TETRA', snapshot, 8);
 assert(stamped.extra.stream.source_sample == uint64(2563));
 assert(strcmp(stamped.extra.stream.position_basis, 'extra.start_time_s'));
+
+buffer = radio.stream.ringBufferInit(78125, 0.1);
+[buffer, ~] = radio.stream.ringBufferPush(buffer, ...
+    radio.stream.makeIqChunk(complex(zeros(1000, 1)), 78125, 0));
+epoch = radio.stream.newEpoch(1, 9, 1, 0);
+seed = pdu;
+seed.extra.fec = struct('rs_12_9_4_ok', true);
+seed = radio.stream.stampStreamPdus(seed, 'DMR', ...
+    radio.stream.ringBufferRange(buffer, 0, 1000), epoch.epochId);
+seeded = radio.stream.winnerCatchup(buffer, epoch, 'DMR', ...
+    'InitialPdus', seed, 'Deduplicate', false);
+assert(any(strcmp({seeded.pdus.type}, 'LC_HEADER')));
+assert(strcmp(seeded.health.status, 'confirmed'));
 end
 
 function [buffer, epoch] = testRealDmrCatchup()

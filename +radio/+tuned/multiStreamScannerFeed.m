@@ -1,5 +1,10 @@
 function [scanner, output] = multiStreamScannerFeed(scanner, widebandChunk)
 %MULTISTREAMSCANNERFEED Send one input block to every selected carrier.
+if radio.getField(scanner, 'externalBaseband', false)
+    error('radio:tuned:multiStreamScannerFeed:ExternalBaseband', ...
+        ['This scanner receives externally computed basebands; call ', ...
+         'multiStreamScannerFeedBasebands instead.']);
+end
 if scanner.finalized
     error('radio:tuned:multiStreamScannerFeed:Finalized', ...
         'A finalized multi-carrier scanner cannot accept more input.');
@@ -26,24 +31,46 @@ if scanner.useFusedDdc
         radio.tuned.multiDdcFeed(scanner.fusedDdc, widebandChunk);
 end
 ddcElapsedSec = toc(ddcToken);
-deferLockedDecode = shouldDeferLockedDecode(scanner);
+if scanner.useFusedDdc
+    [scanner, output] = radio.tuned.multiStreamScannerFeedBasebands( ...
+        scanner, widebandChunk, basebandChunks, ...
+        'DdcElapsedSec', ddcElapsedSec);
+    return;
+end
+[deferLockedDecode, admission] = ...
+    radio.tuned.multiStreamLockedDecodeDeferrals(scanner);
+scanner.lastLockedDecodeAdmission = admission;
+if ~isempty(admission.admittedIndices)
+    interval = uint64(scanner.persistentActorStartIntervalFeeds);
+    scanner.nextPersistentActorStartFeed = scanner.feedCount + interval;
+end
 for k = 1:scanner.channelCount
-    scanner.channels{k}.coordinator.deferLockedDecode = deferLockedDecode;
+    scanner.channels{k}.coordinator.deferLockedDecode = ...
+        deferLockedDecode(k);
 end
 for k = 1:scanner.channelCount
     channelToken = tic;
-    if scanner.useFusedDdc
-        basebandChunk = [];
-        if k <= numel(basebandChunks), basebandChunk = basebandChunks{k}; end
-        [scanner.channels{k}, channelOutputs{k}] = ...
-            radio.tuned.streamScannerFeedBaseband( ...
-                scanner.channels{k}, widebandChunk, basebandChunk);
-    else
-        [scanner.channels{k}, channelOutputs{k}] = ...
-            radio.tuned.streamScannerFeed(scanner.channels{k}, widebandChunk);
-        ddcElapsedSec = ddcElapsedSec + toc(channelToken);
-    end
+    [scanner.channels{k}, channelOutputs{k}] = ...
+        radio.tuned.streamScannerFeed(scanner.channels{k}, widebandChunk);
+    ddcElapsedSec = ddcElapsedSec + toc(channelToken);
     channelElapsedSec(k) = toc(channelToken);
+    decoderMetrics = radio.getField( ...
+        channelOutputs{k}, 'decoderMetrics', struct([]));
+    for decoderIndex = 1:numel(decoderMetrics)
+        decoderMetric = decoderMetrics(decoderIndex);
+        scanner.decoderCompletionCount(k) = ...
+            scanner.decoderCompletionCount(k) + uint64(1);
+        computeSec = double(decoderMetric.computeSec);
+        dispatchSec = double(decoderMetric.dispatchSec);
+        scanner.totalDecoderComputeSec(k) = ...
+            scanner.totalDecoderComputeSec(k) + computeSec;
+        scanner.maxDecoderComputeSec(k) = max( ...
+            scanner.maxDecoderComputeSec(k), computeSec);
+        scanner.totalDecoderDispatchSec(k) = ...
+            scanner.totalDecoderDispatchSec(k) + dispatchSec;
+        scanner.maxDecoderDispatchSec(k) = max( ...
+            scanner.maxDecoderDispatchSec(k), dispatchSec);
+    end
     newPdus = appendStruct(newPdus, channelOutputs{k}.newPdus);
     closedEpochs = appendStruct( ...
         closedEpochs, channelOutputs{k}.closedEpochs);
@@ -92,19 +119,6 @@ output = struct( ...
 output.ddcElapsedSec = scanner.lastDdcElapsedSec;
 output.feedElapsedSec = scanner.lastFeedElapsedSec;
 output.useFusedDdc = scanner.useFusedDdc;
-end
-
-function tf = shouldDeferLockedDecode(scanner)
-% Identification and winner catch-up have priority over steady-state work.
-% Otherwise an early-locking carrier can continuously refill the process
-% queue and starve a later (notably TETRA) winner on the same worker pool.
-priorityStates = {'ACTIVITY_PENDING', 'CLASSIFYING', 'RECLASSIFYING', ...
-    'CATCHING_UP'};
-states = cell(scanner.channelCount, 1);
-for k = 1:scanner.channelCount
-    states{k} = scanner.channels{k}.coordinator.state;
-end
-tf = any(ismember(states, priorityStates));
 end
 
 function value = appendStruct(value, items)

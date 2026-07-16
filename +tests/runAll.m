@@ -25,6 +25,8 @@ tests.runRealtimeFrontendPhase3();
 tests.runRealtimeFrontendPhase4();
 tests.runRealtimeFrontendPhase5();
 tests.runRealtimeFrontendPhase6();
+tests.runSharedIqRing();
+tests.runRealtimeFrontendPhase7();
 tests.runTetraOptimization();
 assert(isequal(radio.normalizeProtocolNames( ...
     {'dmr', 'P25', 'dpmr', 'nxdn', 'tetra'}), ...
@@ -77,6 +79,10 @@ assert(~synthetic.valid_bch && ~synthetic.corrected);
 
 tests.runNxdn96();
 tests.runNxdn96Streaming();
+tests.runP25Streaming();
+tests.runDmrStreaming();
+tests.runDpmrStreaming();
+tests.runTetraStreaming();
 
 cfg = tetra.config();
 seqs = tetra.trainingSequences();

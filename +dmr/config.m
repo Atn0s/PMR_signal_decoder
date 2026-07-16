@@ -16,5 +16,8 @@ cfg.voiceBurstStrideSamples = 2880;
 cfg.voiceBurstCount = 6;
 cfg.burstDedupWindowSamples = 50;
 cfg.dedupFrequencyBucketHz = 5000.0;
+cfg.streamDcTimeConstantSec = 0.25;
+cfg.streamFrequencyEstimateSec = 1.25;
+cfg.streamFlushPaddingSec = 0.010;
+cfg.streamSeenKeyLimit = 512;
 end
-

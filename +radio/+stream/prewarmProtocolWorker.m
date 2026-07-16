@@ -32,10 +32,35 @@ for k = 1:numel(protocolNames)
     token = tic;
     try
         radio.stream.decodeProtocolWindow(protocol, snapshot);
-        if strcmp(protocol, 'P25')
+        if strcmp(protocol, 'DMR')
+            streamFs = 125000;
+            streamCount = round(max(1.25, durationSec) * streamFs);
+            streamChunk = radio.stream.makeIqChunk( ...
+                complex(zeros(streamCount, 1, 'single')), streamFs, 0);
+            streamState = dmr.streamInit(streamFs, dmr.config(), ...
+                'SourceSampleStart', uint64(0));
+            dmr.streamDecodeChunk(streamState, streamChunk);
+        elseif strcmp(protocol, 'P25')
             % The synchronization scan may not reach BCH decoding on a
-            % no-signal vector; exercise that cold path explicitly.
+            % no-signal vector; exercise that cold path explicitly.  The
+            % locked decoder now uses a causal 125 -> 48 kS/s state machine,
+            % so compile and initialize that path on every process worker.
             p25.decodeNid(false(64, 1));
+            streamFs = 125000;
+            streamCount = round(max(1.0, durationSec) * streamFs);
+            streamChunk = radio.stream.makeIqChunk( ...
+                complex(zeros(streamCount, 1, 'single')), streamFs, 0);
+            streamState = p25.streamInit(streamFs, p25.config(), ...
+                'SourceSampleStart', uint64(0));
+            p25.streamDecodeChunk(streamState, streamChunk);
+        elseif strcmp(protocol, 'dPMR')
+            streamFs = 125000;
+            streamCount = round(max(1.0, durationSec) * streamFs);
+            streamChunk = radio.stream.makeIqChunk( ...
+                complex(zeros(streamCount, 1, 'single')), streamFs, 0);
+            streamState = dpmr.streamInit(streamFs, dpmr.config(), ...
+                'SourceSampleStart', uint64(0));
+            dpmr.streamDecodeChunk(streamState, streamChunk);
         elseif strcmp(protocol, 'NXDN')
             % The locked path uses a causal 120 kS/s frontend rather than
             % the offline 48 kS/s window frontend.  Warm that System object
@@ -47,6 +72,14 @@ for k = 1:numel(protocolNames)
             streamState = nxdn.streamInit(streamFs, nxdn.config(), ...
                 'SourceSampleStart', uint64(0));
             nxdn.streamDecodeChunk(streamState, streamChunk);
+        elseif strcmp(protocol, 'TETRA')
+            streamFs = 125000;
+            streamCount = round(max(0.50, durationSec) * streamFs);
+            streamChunk = radio.stream.makeIqChunk( ...
+                complex(zeros(streamCount, 1, 'single')), streamFs, 0);
+            streamState = tetra.streamInit(streamFs, tetra.config(), ...
+                'SourceSampleStart', uint64(0));
+            tetra.streamDecodeChunk(streamState, streamChunk);
         end
         items(k).success = true;
     catch ME

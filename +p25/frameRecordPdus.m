@@ -1,0 +1,83 @@
+function [session, pdus] = frameRecordPdus(session, record, cfg)
+%FRAMERECORDPDUS Format one decoded record and update its call session.
+if nargin < 3 || isempty(cfg), cfg = p25.config(); end
+nid = record.nid;
+frame = record.frame;
+candidate = record.candidate;
+lc = record.lc;
+hcw = record.hcw;
+es = record.es;
+extra = struct( ...
+    'nac', nid.nac, ...
+    'duid', nid.duid, ...
+    'duid_name', nid.duid_name, ...
+    'pdu_type', frame.pdu_type, ...
+    'frame_category', frame.category, ...
+    'is_voice', frame.is_voice, ...
+    'is_control', frame.is_control, ...
+    'is_terminator', frame.is_terminator, ...
+    'has_link_control', frame.has_link_control, ...
+    'valid_bch', nid.valid_bch, ...
+    'corrected', nid.corrected, ...
+    'fs_start', candidate.fs_start, ...
+    'sync_ncc', candidate.ncc, ...
+    'tgid', 0, ...
+    'rs_ok', ~isempty(lc) || ~isempty(hcw) || ~isempty(es));
+if ~isempty(lc)
+    extra.tgid = lc.tgid;
+    extra.lco = lc.lco;
+    extra.mfid = lc.mfid;
+    extra.svc = lc.svc;
+    extra.lc_info = lc.lc_info;
+    extra.lc_octet2 = lc.octet2;
+    extra.lc_octet3 = lc.octet3;
+    extra.lc_emergency = lc.emergency;
+    extra.lc_reserved = lc.reserved;
+    extra.lc_reserved_bits = lc.reserved_bits;
+    extra.is_group = lc.is_group;
+    extra.call_type = lc.call_type;
+end
+if ~isempty(hcw)
+    extra.tgid = hcw.tgid;
+    extra.mi = hcw.mi;
+    extra.hdu_mfid = hcw.mfid;
+    extra.algid = hcw.algid;
+    extra.kid = hcw.kid;
+    extra.hdu_tgid = hcw.tgid;
+    extra.hdu_golay_corrected = hcw.golay_corrected;
+end
+if ~isempty(es)
+    extra.es_mi = es.mi;
+    extra.es_algid = es.algid;
+    extra.es_kid = es.kid;
+    extra.es_hamming_corrected = es.hamming_corrected;
+end
+pdu = struct( ...
+    'protocol', 'P25', ...
+    'type', 'P25_NID', ...
+    'src', record.src, ...
+    'dst', record.dst, ...
+    'ts', 0, ...
+    'flco', nid.duid_name, ...
+    'fid', '', ...
+    'extra', extra, ...
+    'raw_bits', record.bits(:).');
+if frame.duid == 5 && ~isempty(lc)
+    pdu.type = 'P25_LDU1';
+elseif frame.duid == 0 && ~isempty(hcw)
+    pdu.type = 'P25_HDU';
+elseif frame.duid == 10 && ~isempty(es)
+    pdu.type = 'P25_LDU2';
+end
+pdus = pdu;
+[session, call] = p25.sessionFeed(session, frame, lc, ...
+    candidate.fs_start, cfg.samplesPerSymbol);
+if ~isempty(call)
+    if ~isfield(call, 'extra') || isempty(call.extra)
+        call.extra = struct();
+    end
+    call.extra.fs_start = candidate.fs_start;
+    pdus(end+1) = call;
+end
+pdus = radio.normalizePdus(pdus);
+end

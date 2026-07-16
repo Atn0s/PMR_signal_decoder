@@ -15,5 +15,8 @@ cfg.stableNacMinCount = 5;
 cfg.stableNacMinRatio = 0.4;
 cfg.lduSymbols = 864;
 cfg.dedupFrameBucketSamples = 8640;
+cfg.streamDcTimeConstantSec = 0.25;
+cfg.streamFrequencyEstimateSec = 1.0;
+cfg.streamFlushPaddingSec = 0.010;
+cfg.streamMaxPendingInvalidFrames = 64;
 end
-

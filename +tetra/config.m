@@ -54,4 +54,6 @@ cfg.dmoBurstCandidateMaxCount = 600;
 cfg.dmoPayloadMinValidRatio = 0.70;
 cfg.schSBlockCodeMaxErrors = 0;
 cfg.schSTailMaxErrors = 0;
+cfg.streamCalibrationSec = 0.50;
+cfg.streamFlushPaddingSec = 0.025;
 end

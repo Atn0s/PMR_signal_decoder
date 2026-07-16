@@ -32,9 +32,11 @@ for k = 1:numel(bursts)
     end
 end
 
-sessions = sessionPdus(pdus);
-for k = 1:numel(sessions)
-    pdus = appendPdu(pdus, sessions(k));
+if fieldOr(context, 'emitSessions', true)
+    sessions = tetra.sessionizePdus(pdus);
+    for k = 1:numel(sessions)
+        pdus = appendPdu(pdus, sessions(k));
+    end
 end
 end
 

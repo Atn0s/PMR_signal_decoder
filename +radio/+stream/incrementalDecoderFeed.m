@@ -6,7 +6,7 @@ if chunk.sampleRateHz ~= state.sampleRateHz
         'Chunk and incremental decoder sample rates differ.');
 end
 if isfield(state, 'nativeStreaming') && state.nativeStreaming
-    [state, result] = feedNativeNxdn(state, chunk);
+    [state, result] = feedNativeProtocol(state, chunk);
     return;
 end
 reset = logical(chunk.discontinuity);
@@ -62,7 +62,7 @@ result = struct( ...
     'elapsedSec', toc(token));
 end
 
-function [state, result] = feedNativeNxdn(state, chunk)
+function [state, result] = feedNativeProtocol(state, chunk)
 reset = logical(chunk.discontinuity);
 if ~isempty(state.nextExpectedSample) && ...
         chunk.sourceSampleStart ~= state.nextExpectedSample
@@ -79,31 +79,29 @@ if isempty(state.nativeState)
     if ~isempty(state.nativeSeed)
         seed = state.nativeSeed;
         seed.discontinuity = false;
-        state.nativeState = nxdn.streamInit( ...
-            state.sampleRateHz, nxdn.config(), ...
-            'SourceSampleStart', seed.sourceSampleStart);
-        [state.nativeState, ~] = ...
-            nxdn.streamDecodeChunk(state.nativeState, seed);
+        state.nativeState = nativeInit( ...
+            state.protocol, state.sampleRateHz, seed.sourceSampleStart);
+        [state.nativeState, ~] = nativeFeed( ...
+            state.protocol, state.nativeState, seed);
         state.nativeSeed = [];
     else
-        state.nativeState = nxdn.streamInit( ...
-            state.sampleRateHz, nxdn.config(), ...
-            'SourceSampleStart', chunk.sourceSampleStart);
+        state.nativeState = nativeInit( ...
+            state.protocol, state.sampleRateHz, chunk.sourceSampleStart);
     end
 end
 
 nativeChunk = chunk;
 nativeChunk.discontinuity = false;
 token = tic;
-[state.nativeState, decoded] = ...
-    nxdn.streamDecodeChunk(state.nativeState, nativeChunk);
+[state.nativeState, decoded] = nativeFeed( ...
+    state.protocol, state.nativeState, nativeChunk);
 state.nextExpectedSample = chunk.sourceSampleEnd;
 state.feedCount = state.feedCount + uint64(1);
 state.inputSampleCount = state.inputSampleCount + uint64(numel(chunk.iq));
 state.lastDiagnostics = decoded.diagnostics;
 state.lastFrequencyOffsetHz = decoded.frequencyOffsetHz;
 state.lastTimingState = decoded.timingState;
-retainedTargetSamples = numel(state.nativeState.demodBuffer);
+retainedTargetSamples = nativeRetainedTargetSamples(state.nativeState);
 retainedInputSamples = round(retainedTargetSamples * ...
     state.sampleRateHz / state.nativeState.targetSampleRateHz);
 
@@ -119,4 +117,64 @@ result = struct( ...
     'reset', reset, ...
     'nativeStreaming', true, ...
     'elapsedSec', toc(token));
+end
+
+function native = nativeInit(protocol, sampleRateHz, sourceSampleStart)
+switch protocol
+    case 'DMR'
+        native = dmr.streamInit(sampleRateHz, dmr.config(), ...
+            'SourceSampleStart', sourceSampleStart);
+    case 'NXDN'
+        native = nxdn.streamInit(sampleRateHz, nxdn.config(), ...
+            'SourceSampleStart', sourceSampleStart);
+    case 'P25'
+        native = p25.streamInit(sampleRateHz, p25.config(), ...
+            'SourceSampleStart', sourceSampleStart);
+    case 'dPMR'
+        native = dpmr.streamInit(sampleRateHz, dpmr.config(), ...
+            'SourceSampleStart', sourceSampleStart);
+    case 'TETRA'
+        native = tetra.streamInit(sampleRateHz, tetra.config(), ...
+            'SourceSampleStart', sourceSampleStart);
+    otherwise
+        error('radio:stream:incrementalDecoderFeed:NativeProtocol', ...
+            'No native stream decoder is registered for %s.', protocol);
+end
+end
+
+function [native, decoded] = nativeFeed(protocol, native, chunk)
+switch protocol
+    case 'DMR'
+        [native, decoded] = dmr.streamDecodeChunk(native, chunk);
+    case 'NXDN'
+        [native, decoded] = nxdn.streamDecodeChunk(native, chunk);
+    case 'P25'
+        [native, decoded] = p25.streamDecodeChunk(native, chunk);
+    case 'dPMR'
+        [native, decoded] = dpmr.streamDecodeChunk(native, chunk);
+    case 'TETRA'
+        [native, decoded] = tetra.streamDecodeChunk(native, chunk);
+    otherwise
+        error('radio:stream:incrementalDecoderFeed:NativeProtocol', ...
+            'No native stream decoder is registered for %s.', protocol);
+end
+end
+
+function count = nativeRetainedTargetSamples(native)
+count = 0;
+if isfield(native, 'demodBuffer')
+    count = numel(native.demodBuffer);
+end
+if isfield(native, 'calibrationBuffer')
+    count = max(count, numel(native.calibrationBuffer));
+end
+if isfield(native, 'matchedBuffer')
+    count = max(count, numel(native.matchedBuffer));
+end
+if isfield(native, 'bitBuffer') && isfield(native, 'cfg') && ...
+        isfield(native.cfg, 'symbolRateHz')
+    bitEquivalent = ceil(numel(native.bitBuffer) * ...
+        native.targetSampleRateHz / (2 * native.cfg.symbolRateHz));
+    count = max(count, bitEquivalent);
+end
 end

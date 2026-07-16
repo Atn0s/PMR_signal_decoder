@@ -1,7 +1,8 @@
 function app = radio_live_frontend(varargin)
 %RADIO_LIVE_FRONTEND Lean 1x file-replay spectrum and multi-carrier UI.
-% Heavy protocol work runs on process workers.  The UI timer only performs
-% paced file input, low-cost PSD updates, and selected-carrier DDC fan-out.
+% File production and PSD run on background workers.  A shared-memory IQ
+% ring connects the producer to a reserved DDC process without UI relay;
+% protocol work uses the remaining process workers.
 p = inputParser;
 p.addParameter('DefaultFile', defaultCapture());
 p.addParameter('Visible', 'on');
@@ -17,7 +18,12 @@ p.addParameter('MaxChunksPerTick', 16);
 p.addParameter('MaxCarrierPaths', 5);
 p.addParameter('DecoderQueueLimitSec', 15.0);
 p.addParameter('DecoderCatchupChunksPerTick', 8);
-p.addParameter('DecoderCatchupBudgetSec', 0.012);
+p.addParameter('DecoderCatchupBudgetSec', 0.030);
+p.addParameter('DecoderCatchupMaxBudgetSec', 0.080);
+p.addParameter('UseAsyncFrontend', true);
+p.addParameter('FrontendWorkerReserve', 1);
+p.addParameter('ProducerQueueLimitSec', 2.0);
+p.addParameter('SpectrumQueueLimitChunks', 12);
 p.addParameter('ProtocolNames', {});
 p.addParameter('ParallelMode', 'parallel');
 p.addParameter('NumWorkers', 5);
@@ -42,6 +48,10 @@ p.addParameter('AutoStartPreview', false);
 p.parse(varargin{:});
 options = p.Results;
 validateOptions(options);
+parallelMode = lower(char(options.ParallelMode));
+asyncConfigured = logical(options.UseAsyncFrontend) && ...
+    logical(options.UseFusedDdc) && ...
+    any(strcmp(parallelMode, {'auto', 'parallel'}));
 
 fig = uifigure('Name', 'PMR 1x Live Multi-Carrier Frontend', ...
     'Position', [100 80 1320 760], 'Visible', char(options.Visible));
@@ -151,6 +161,17 @@ state = struct( ...
     'source', [], ...
     'spectrum', [], ...
     'snapshot', [], ...
+    'asyncEnabled', asyncConfigured, ...
+    'producerActor', [], ...
+    'spectrumActor', [], ...
+    'ddcActor', [], ...
+    'sharedIqRing', [], ...
+    'producerRunning', false, ...
+    'producerTerminal', false, ...
+    'ddcResultQueue', {cell(0, 1)}, ...
+    'ddcResultQueueHead', 1, ...
+    'ddcResultQueueSamples', uint64(0), ...
+    'ddcFlushComplete', false, ...
     'selections', emptySelections(), ...
     'scanner', [], ...
     'scannerBuildFuture', [], ...
@@ -176,6 +197,14 @@ state = struct( ...
     'closing', false, ...
     'inputLagSec', 0, ...
     'maxInputLagSec', 0, ...
+    'maxProducerLagSec', 0, ...
+    'maxProducerQueueSec', 0, ...
+    'maxDdcInputQueueSec', 0, ...
+    'maxDdcResultQueueSec', 0, ...
+    'maxDecoderPipelineQueueSec', 0, ...
+    'asyncCoordinatorCount', uint64(0), ...
+    'asyncCoordinatorTotalSec', 0, ...
+    'asyncCoordinatorMaxSec', 0, ...
     'lastUiUpdateSec', 0, ...
     'lastDecoderSummaryKey', '', ...
     'lastSpectrumDrawCount', uint64(0));
@@ -316,20 +345,36 @@ end
         ensureCapture();
         stopTimer(); discardDecoder('preview_restarted'); closeSource();
         ensureDecodeRuntimePrepared();
-        state.source = createSource();
-        state.spectrum = radio.scope.spectrumInit( ...
-            state.metadata.sampleRateHz, state.metadata.centerFrequencyHz, ...
-            'Config', options.SpectrumConfig);
-        state.snapshot = radio.scope.spectrumSnapshot( ...
-            state.spectrum, 'IncludeWaterfall', false);
+        if state.asyncEnabled
+            startAsyncSource();
+        else
+            state.source = createSource();
+            state.spectrum = radio.scope.spectrumInit( ...
+                state.metadata.sampleRateHz, ...
+                state.metadata.centerFrequencyHz, ...
+                'Config', options.SpectrumConfig);
+            state.snapshot = radio.scope.spectrumSnapshot( ...
+                state.spectrum, 'IncludeWaterfall', false);
+        end
         state.pdus = struct([]);
         state.clockToken = tic;
         state.clockBaseSample = uint64(0);
         state.inputLagSec = 0; state.maxInputLagSec = 0;
+        state.maxProducerLagSec = 0;
+        state.maxProducerQueueSec = 0;
+        state.maxDdcInputQueueSec = 0;
+        state.maxDdcResultQueueSec = 0;
+        state.maxDecoderPipelineQueueSec = 0;
+        state.asyncCoordinatorCount = uint64(0);
+        state.asyncCoordinatorTotalSec = 0;
+        state.asyncCoordinatorMaxSec = 0;
         state.lastUiUpdateSec = 0;
         setMode('PREVIEW');
         appendLog('1x preview started; click PSD peaks to add carriers.');
-        if q.Results.StartTimer, start(state.timer); end
+        if q.Results.StartTimer
+            resumeReplayClock();
+            start(state.timer);
+        end
     end
 
     function selection = addOffsetPublic(offsetHz, varargin)
@@ -426,14 +471,34 @@ end
         upgradeState();
         if nargin < 1, count = 1; end
         stopTimer();
-        for k = 1:count
-            if isempty(state.source) || state.source.terminal, break; end
+        if state.asyncEnabled
+            startSample = state.source.globalNextSample;
+            state.producerActor = radio.live.fileProducerCommand( ...
+                state.producerActor, 'step', count);
+            targetSample = startSample + uint64(round( ...
+                count * options.InputChunkDurationSec * ...
+                state.metadata.sampleRateHz));
+            token = tic;
+            while state.source.globalNextSample < targetSample && ...
+                    ~state.source.terminal && toc(token) < 30
+                processAsyncPipeline();
+                pause(0.001);
+            end
+            while asyncDecoderQueueSamples() > 0 && toc(token) < 30
+                processAsyncPipeline();
+                pause(0.001);
+            end
+            processAsyncPipeline();
+        else
+            for k = 1:count
+                if isempty(state.source) || state.source.terminal, break; end
+                pollScannerBuild();
+                processOneChunk();
+                drainDecoderQueue(inf, inf);
+            end
             pollScannerBuild();
-            processOneChunk();
             drainDecoderQueue(inf, inf);
         end
-        pollScannerBuild();
-        drainDecoderQueue(inf, inf);
         if ~isempty(state.source) && state.source.terminal
             finishSource();
         end
@@ -442,6 +507,10 @@ end
 
     function processDueChunks()
         if isempty(state.source), return; end
+        if state.asyncEnabled
+            processAsyncPipeline();
+            return;
+        end
         pollScannerBuild();
         elapsed = toc(state.clockToken);
         targetSec = max(0, elapsed - options.PlayoutDelaySec);
@@ -504,6 +573,380 @@ end
         end
     end
 
+    function startAsyncSource()
+        if ~isempty(state.sharedIqRing)
+            radio.live.sharedIqRingDelete(state.sharedIqRing);
+        end
+        chunkSamples = max(1, round(options.InputChunkDurationSec * ...
+            state.metadata.sampleRateHz));
+        state.sharedIqRing = radio.live.sharedIqRingCreate( ...
+            state.metadata.sampleRateHz, chunkSamples, ...
+            'CenterFrequencyHz', state.metadata.centerFrequencyHz, ...
+            'CapacitySec', options.ProducerQueueLimitSec);
+        state.spectrumActor = radio.live.spectrumActorStart( ...
+            state.metadata.sampleRateHz, ...
+            state.metadata.centerFrequencyHz, ...
+            'Config', options.SpectrumConfig, ...
+            'MaxQueueChunks', options.SpectrumQueueLimitChunks);
+        startPreviewDdcActor();
+        waitForSpectrumActor();
+        producerCfg = struct( ...
+            'path', state.metadata.path, ...
+            'sampleRateHz', state.metadata.sampleRateHz, ...
+            'centerFrequencyHz', state.metadata.centerFrequencyHz, ...
+            'iqDType', options.IqDType, ...
+            'headerBytes', state.metadata.headerBytes, ...
+            'chunkDurationSec', options.InputChunkDurationSec, ...
+            'replayMode', options.ReplayMode, ...
+            'maxLoops', options.MaxLoops, ...
+            'epochSilenceSec', options.EpochSilenceSec, ...
+            'playoutDelaySec', options.PlayoutDelaySec, ...
+            'directFanout', true, ...
+            'sharedRing', state.sharedIqRing, ...
+            'maxQueueChunks', max(2, ceil( ...
+                options.ProducerQueueLimitSec / ...
+                options.InputChunkDurationSec)));
+        state.producerActor = radio.live.fileProducerStart(producerCfg);
+        state.producerActor = radio.live.fileProducerAttachSpectrum( ...
+            state.producerActor, state.spectrumActor);
+        initialSpectrum = radio.scope.spectrumInit( ...
+            state.metadata.sampleRateHz, ...
+            state.metadata.centerFrequencyHz, ...
+            'Config', options.SpectrumConfig);
+        state.snapshot = radio.scope.spectrumSnapshot( ...
+            initialSpectrum, 'IncludeWaterfall', false);
+        state.source = struct( ...
+            'globalNextSample', uint64(0), ...
+            'completedLoops', uint64(0), ...
+            'terminal', false, ...
+            'closed', false);
+        state.producerRunning = false;
+        state.producerTerminal = false;
+        state.ddcResultQueue = cell(0, 1);
+        state.ddcResultQueueHead = 1;
+        state.ddcResultQueueSamples = uint64(0);
+        state.ddcFlushComplete = false;
+        state.spectrum = [];
+    end
+
+    function waitForSpectrumActor()
+        token = tic;
+        while ~state.spectrumActor.ready && ...
+                ~state.spectrumActor.failed && toc(token) < 5
+            [state.spectrumActor, snapshot] = ...
+                radio.live.spectrumActorPoll(state.spectrumActor);
+            if ~isempty(snapshot), state.snapshot = snapshot; end
+            if ~state.spectrumActor.ready, pause(0.001); end
+        end
+        if ~state.spectrumActor.ready
+            error('radio_live_frontend:SpectrumActorStartup', ...
+                'Spectrum consumer did not become ready: %s', ...
+                state.spectrumActor.errorReason);
+        end
+    end
+
+    function startPreviewDdcActor()
+        if ~isempty(state.ddcActor) && state.ddcActor.ready && ...
+                ~state.ddcActor.failed && ~state.ddcActor.stopped && ...
+                state.ddcActor.processedInputSamples == 0
+            return;
+        end
+        [tunedConfig, ~] = radio.tuned.resolveInputConfig( ...
+            state.metadata.sampleRateHz, options.TunedConfig);
+        [pool, info] = radio.stream.acquireParallelPool( ...
+            'NumWorkers', runtimeWorkerCount(), ...
+            'PoolType', options.PoolType, ...
+            'AllowCreate', false);
+        if isempty(pool) || ~info.available || ...
+                pool.NumWorkers <= options.NumWorkers
+            error('radio_live_frontend:AsyncDdcPool', ...
+                ['The separated DDC consumer requires %d protocol workers ', ...
+                 'plus at least one reserved process worker.'], ...
+                options.NumWorkers);
+        end
+        spec = struct( ...
+            'buildOnWorker', true, ...
+            'initialConfigured', false, ...
+            'inputSampleRateHz', state.metadata.sampleRateHz, ...
+            'frequencyOffsetsHz', 0, ...
+            'config', tunedConfig, ...
+            'inputCenterFrequencyHz', ...
+                state.metadata.centerFrequencyHz, ...
+            'capacity', options.MaxCarrierPaths, ...
+            'prewarm', logical(options.PrewarmDdc));
+        state.ddcActor = radio.live.ddcActorStart( ...
+            pool, spec, 'MaxQueueSec', options.DecoderQueueLimitSec);
+        appendLog('Prewarming the reserved DDC worker before replay.');
+        token = tic;
+        while ~state.ddcActor.ready && ~state.ddcActor.failed && ...
+                toc(token) < 30
+            [state.ddcActor, ~] = radio.live.ddcActorPoll(state.ddcActor);
+            if ~state.ddcActor.ready
+                pause(0.005);
+                drawnow limitrate;
+            end
+        end
+        if ~state.ddcActor.ready
+            error('radio_live_frontend:AsyncDdcStartup', ...
+                'Reserved DDC worker failed to start: %s', ...
+                state.ddcActor.errorReason);
+        end
+        appendLog(sprintf('Reserved DDC worker ready in %.3f s.', toc(token)));
+    end
+
+    function processAsyncPipeline()
+        coordinatorToken = tic;
+        pollScannerBuild();
+        [state.producerActor, producerEvents] = ...
+            radio.live.fileProducerPoll(state.producerActor, ...
+                'MaxEvents', options.MaxChunksPerTick);
+        for eventIndex = 1:numel(producerEvents)
+            handleProducerEvent(producerEvents{eventIndex});
+        end
+
+        % Acquisition and ordered decoder consumption take precedence over
+        % best-effort rendering.  PSD computation continues independently
+        % even when this coordinator needs a short catch-up burst.
+        pollAsyncDdc();
+        pollScannerBuild();
+        [drainChunks, drainBudgetSec] = asyncDrainAllowance();
+        drainAsyncDdcResults(drainChunks, drainBudgetSec);
+
+        [state.spectrumActor, latestSnapshot] = ...
+            radio.live.spectrumActorPoll(state.spectrumActor);
+        if ~isempty(latestSnapshot)
+            state.snapshot = latestSnapshot;
+            updateSpectrum();
+        end
+
+        producerQueueSec = double(asyncProducerRelaySamples()) / ...
+            state.metadata.sampleRateHz;
+        producerLagSec = state.producerActor.productionLagSec;
+        ddcInputQueueSec = 0;
+        if ~isempty(state.ddcActor)
+            ddcInputQueueSec = double(asyncDdcInputQueueSamples()) / ...
+                state.metadata.sampleRateHz;
+        end
+        ddcResultQueueSec = double(state.ddcResultQueueSamples) / ...
+            state.metadata.sampleRateHz;
+        decoderPipelineQueueSec = ddcInputQueueSec + ddcResultQueueSec;
+        state.inputLagSec = max([ ...
+            producerLagSec, ...
+            producerQueueSec, ...
+            decoderPipelineQueueSec]);
+        state.maxInputLagSec = max(state.maxInputLagSec, state.inputLagSec);
+        state.maxProducerLagSec = max( ...
+            state.maxProducerLagSec, producerLagSec);
+        state.maxProducerQueueSec = max( ...
+            state.maxProducerQueueSec, producerQueueSec);
+        state.maxDdcInputQueueSec = max( ...
+            state.maxDdcInputQueueSec, ddcInputQueueSec);
+        state.maxDdcResultQueueSec = max( ...
+            state.maxDdcResultQueueSec, ddcResultQueueSec);
+        state.maxDecoderPipelineQueueSec = max( ...
+            state.maxDecoderPipelineQueueSec, decoderPipelineQueueSec);
+        coordinatorElapsedSec = toc(coordinatorToken);
+        state.asyncCoordinatorCount = state.asyncCoordinatorCount + uint64(1);
+        state.asyncCoordinatorTotalSec = ...
+            state.asyncCoordinatorTotalSec + coordinatorElapsedSec;
+        state.asyncCoordinatorMaxSec = max( ...
+            state.asyncCoordinatorMaxSec, coordinatorElapsedSec);
+        elapsed = toc(state.clockToken);
+        if elapsed - state.lastUiUpdateSec >= 0.1 || ...
+                state.source.terminal
+            updateRuntimeLabels(elapsed);
+            state.lastUiUpdateSec = elapsed;
+        end
+
+        if state.producerTerminal
+            if isDecoderActive() && ~isempty(state.ddcActor)
+                if ~state.ddcActor.ringAttached && ...
+                        ~state.ddcActor.ringDrained && ...
+                        ~state.ddcActor.flushRequested
+                    state.ddcActor = ...
+                        radio.live.ddcActorFlush(state.ddcActor);
+                end
+                if state.ddcActor.flushed && ...
+                        asyncDecoderQueueSamples() == 0 && ...
+                        asyncDdcResultQueueIsEmpty()
+                    finishSource();
+                end
+            elseif asyncDdcResultQueueIsEmpty()
+                finishSource();
+            end
+        end
+    end
+
+    function [maxChunks, budgetSec] = asyncDrainAllowance()
+        maxChunks = options.DecoderCatchupChunksPerTick;
+        budgetSec = options.DecoderCatchupBudgetSec;
+        readySec = double(state.ddcResultQueueSamples) / ...
+            state.metadata.sampleRateHz;
+        if readySec <= options.InputChunkDurationSec
+            return;
+        end
+        % A single long classification submission can temporarily create
+        % several ready blocks.  Give the control plane a bounded burst to
+        % recover instead of processing exactly one block forever.
+        readyChunks = ceil(readySec / options.InputChunkDurationSec);
+        maxChunks = min(options.MaxChunksPerTick, ...
+            max(maxChunks, readyChunks));
+        budgetSec = max(budgetSec, min( ...
+            options.DecoderCatchupMaxBudgetSec, readySec));
+    end
+
+    function handleProducerEvent(event)
+        switch char(event.type)
+            case 'chunk'
+                transport = struct('chunk', event.chunk, ...
+                    'payload', event.payload);
+                if ~state.producerActor.directFanout
+                    state.spectrumActor = radio.live.spectrumActorSubmit( ...
+                        state.spectrumActor, transport);
+                end
+                if isDecoderActive() && ...
+                        (isempty(state.sharedIqRing) || ...
+                         ~state.producerActor.sharedRingEnabled)
+                    if isempty(state.ddcActor)
+                        error('radio_live_frontend:AsyncDdcMissing', ...
+                            'Decoder is active without its DDC consumer.');
+                    end
+                    state.ddcActor = radio.live.ddcActorSubmit( ...
+                        state.ddcActor, transport);
+                end
+                state.source.globalNextSample = ...
+                    uint64(event.sourceSampleEnd);
+                state.source.completedLoops = ...
+                    uint64(event.completedLoops);
+                if event.event.loopEnded
+                    appendLog(sprintf('Replay loop %d completed.', ...
+                        event.event.completedLoops));
+                end
+            case 'progress'
+                state.source.globalNextSample = ...
+                    uint64(event.sourceSampleEnd);
+                state.source.completedLoops = ...
+                    uint64(event.completedLoops);
+                if event.event.loopEnded
+                    appendLog(sprintf('Replay loop %d completed.', ...
+                        event.event.completedLoops));
+                end
+            case 'terminal'
+                state.producerTerminal = true;
+                state.source.terminal = true;
+                state.source.globalNextSample = ...
+                    uint64(event.sourceSampleEnd);
+                state.source.completedLoops = ...
+                    uint64(event.completedLoops);
+            case 'error'
+                state.producerTerminal = true;
+                state.source.terminal = true;
+                error('radio_live_frontend:ProducerFailed', ...
+                    '%s', event.errorReason);
+        end
+    end
+
+    function pollAsyncDdc()
+        if isempty(state.ddcActor), return; end
+        [state.ddcActor, ddcEvents] = radio.live.ddcActorPoll( ...
+            state.ddcActor, 'MaxEvents', options.MaxChunksPerTick);
+        for eventIndex = 1:numel(ddcEvents)
+            event = ddcEvents{eventIndex};
+            switch char(event.type)
+                case {'baseband', 'flushed'}
+                    state.ddcResultQueue{end+1, 1} = event;
+                    count = uint64(radio.getField( ...
+                        event.widebandDescriptor, ...
+                        'transportSampleCount', uint64(0)));
+                    state.ddcResultQueueSamples = ...
+                        state.ddcResultQueueSamples + count;
+                    if strcmp(event.type, 'flushed')
+                        state.ddcFlushComplete = true;
+                    end
+                case 'error'
+                    error('radio_live_frontend:DdcActorFailed', ...
+                        '%s', event.errorReason);
+            end
+        end
+    end
+
+    function drainAsyncDdcResults(maxChunks, budgetSec)
+        if isempty(state.scanner) || state.scanner.finalized || ...
+                asyncDdcResultQueueIsEmpty()
+            return;
+        end
+        token = tic;
+        processed = 0;
+        while ~asyncDdcResultQueueIsEmpty() && processed < maxChunks
+            if processed > 0 && toc(token) >= budgetSec, break; end
+            event = state.ddcResultQueue{state.ddcResultQueueHead};
+            state.ddcResultQueue{state.ddcResultQueueHead} = [];
+            state.ddcResultQueueHead = state.ddcResultQueueHead + 1;
+            count = uint64(radio.getField(event.widebandDescriptor, ...
+                'transportSampleCount', uint64(0)));
+            state.ddcResultQueueSamples = ...
+                state.ddcResultQueueSamples - ...
+                min(state.ddcResultQueueSamples, count);
+            [state.scanner, multiOutput] = ...
+                radio.tuned.multiStreamScannerFeedBasebands( ...
+                    state.scanner, event.widebandDescriptor, ...
+                    event.basebandChunks, ...
+                    'DdcElapsedSec', event.computeSec);
+            if ~isempty(multiOutput.newPdus)
+                state.pdus = state.scanner.pdus;
+                printPdus(multiOutput.newPdus);
+            end
+            printStateEvents(multiOutput);
+            processed = processed + 1;
+        end
+        compactAsyncDdcResultQueue();
+        if processed > 0 && ~isempty(state.scanner)
+            updateDecoderSummary();
+        end
+    end
+
+    function tf = asyncDdcResultQueueIsEmpty()
+        tf = state.ddcResultQueueHead > numel(state.ddcResultQueue);
+    end
+
+    function compactAsyncDdcResultQueue()
+        if asyncDdcResultQueueIsEmpty()
+            state.ddcResultQueue = cell(0, 1);
+            state.ddcResultQueueHead = 1;
+        elseif state.ddcResultQueueHead > 64 && ...
+                state.ddcResultQueueHead > numel(state.ddcResultQueue) / 2
+            state.ddcResultQueue = state.ddcResultQueue( ...
+                state.ddcResultQueueHead:end);
+            state.ddcResultQueueHead = 1;
+        end
+    end
+
+    function count = asyncDecoderQueueSamples()
+        count = asyncDdcInputQueueSamples() + state.ddcResultQueueSamples;
+    end
+
+    function count = asyncDdcInputQueueSamples()
+        count = asyncProducerRelaySamples();
+        if ~isempty(state.ddcActor)
+            count = count + state.ddcActor.pendingInputSamples;
+        end
+    end
+
+    function count = asyncProducerRelaySamples()
+        count = uint64(0);
+        if ~isempty(state.producerActor) && ...
+                state.producerActor.sharedRingEnabled
+            return;
+        end
+        if isempty(state.producerActor) || ...
+                ~state.producerActor.decoderArmed
+            return;
+        end
+        count = uint64(state.producerActor.outputQueue.QueueLength) * ...
+            uint64(round(options.InputChunkDurationSec * ...
+                state.metadata.sampleRateHz));
+    end
+
     function ensureDecodeRuntimePrepared()
         if state.runtimePrepared, return; end
         state.runtimePrepared = true;
@@ -520,9 +963,21 @@ end
             'this one-time step prevents Run Decode from freezing the PSD.']);
         drawnow;
         token = tic;
+        requestedWorkers = runtimeWorkerCount();
         [pool, info] = radio.stream.acquireParallelPool( ...
-            'NumWorkers', options.NumWorkers, ...
+            'NumWorkers', requestedWorkers, ...
             'PoolType', options.PoolType);
+        if state.asyncEnabled && ~isempty(pool) && ...
+                pool.NumWorkers < requestedWorkers
+            appendLog(sprintf([ ...
+                'Existing pool has %d workers; recreating it with %d so ', ...
+                'DDC has a reserved process.'], ...
+                pool.NumWorkers, requestedWorkers));
+            delete(pool);
+            [pool, info] = radio.stream.acquireParallelPool( ...
+                'NumWorkers', requestedWorkers, ...
+                'PoolType', options.PoolType);
+        end
         state.runtimePoolInfo = info;
         if isempty(pool) || ~info.available
             appendLog(sprintf([ ...
@@ -532,7 +987,7 @@ end
             warmReport = radio.stream.prewarmProtocolWorkers( ...
                 options.ProtocolNames, ...
                 'Pool', pool, ...
-                'NumWorkers', options.NumWorkers, ...
+                'NumWorkers', requestedWorkers, ...
                 'PoolType', options.PoolType);
             state.runtimeWarmReport = warmReport;
             state.runtimeWorkersWarmed = warmReport.success;
@@ -558,7 +1013,7 @@ end
 
         [tunedConfig, ~] = radio.tuned.resolveInputConfig( ...
             state.metadata.sampleRateHz, options.TunedConfig);
-        if options.PrewarmDdc
+        if options.PrewarmDdc && ~state.asyncEnabled
             if options.UseFusedDdc
                 state.preparedFusedDdcState = ...
                     radio.tuned.multiDdcInit( ...
@@ -593,7 +1048,14 @@ end
     end
 
     function startScannerBuild(offsets, tunedConfig)
-        state.scannerRequestedSample = state.source.globalNextSample;
+        ringSnapshot = [];
+        if state.asyncEnabled && ~isempty(state.sharedIqRing)
+            ringSnapshot = ...
+                radio.live.sharedIqRingSnapshot(state.sharedIqRing);
+            state.scannerRequestedSample = ringSnapshot.sourceSampleEnd;
+        else
+            state.scannerRequestedSample = state.source.globalNextSample;
+        end
         state.scannerReadySample = [];
         state.decoderQueue = cell(0, 1);
         state.decoderQueueHead = 1;
@@ -604,11 +1066,14 @@ end
                 numel(state.decoderQueue));
         end
         state.scannerBuildToken = tic;
+        if state.asyncEnabled
+            startAsyncDdc(offsets, tunedConfig, ringSnapshot);
+        end
         args = scannerInitArguments(offsets, tunedConfig);
 
         hasPreparedFused = options.UseFusedDdc && ...
             ~isempty(state.preparedFusedDdcState);
-        if hasPreparedFused || ...
+        if state.asyncEnabled || hasPreparedFused || ...
                 numel(state.preparedDdcStates) >= numel(offsets)
             setMode('ATTACHING');
             scanner = radio.tuned.multiStreamScannerInit(args{:});
@@ -638,6 +1103,8 @@ end
 
     function args = scannerInitArguments(offsets, tunedConfig)
         prepared = cell(0, 1);
+        fusedState = state.preparedFusedDdcState;
+        if state.asyncEnabled, fusedState = []; end
         if ~options.UseFusedDdc && ...
                 numel(state.preparedDdcStates) >= numel(offsets)
             prepared = state.preparedDdcStates(1:numel(offsets));
@@ -654,7 +1121,7 @@ end
             'TaskContext', options.TaskContext, ...
             'LockedDecodeFcn', options.LockedDecodeFcn, ...
             'Deduplicate', options.Deduplicate, ...
-            'PrewarmDdc', options.PrewarmDdc, ...
+            'PrewarmDdc', options.PrewarmDdc && ~state.asyncEnabled, ...
             'WarmParallelPool', false, ...
             'DdcStates', prepared, ...
             'ProbeMaxInFlightPerChannel', ...
@@ -665,7 +1132,8 @@ end
             'CandidateGateEnabled', options.CandidateGateEnabled};
         args = [args, { ...
             'UseFusedDdc', options.UseFusedDdc, ...
-            'FusedDdcState', state.preparedFusedDdcState}];
+            'FusedDdcState', fusedState, ...
+            'ExternalBaseband', state.asyncEnabled}];
     end
 
     function [pool, info] = availableBuildPool()
@@ -678,6 +1146,60 @@ end
             'NumWorkers', options.NumWorkers, ...
             'PoolType', options.PoolType, ...
             'AllowCreate', false);
+    end
+
+    function count = runtimeWorkerCount()
+        count = double(options.NumWorkers);
+        if state.asyncEnabled
+            count = count + double(options.FrontendWorkerReserve);
+        end
+    end
+
+    function startAsyncDdc(offsets, tunedConfig, ringSnapshot)
+        state.ddcResultQueue = cell(0, 1);
+        state.ddcResultQueueHead = 1;
+        state.ddcResultQueueSamples = uint64(0);
+        state.ddcFlushComplete = false;
+        if ~isempty(state.ddcActor) && state.ddcActor.ready && ...
+                ~state.ddcActor.failed && ~state.ddcActor.stopped && ...
+                state.ddcActor.processedInputSamples == 0
+            state.ddcActor = radio.live.ddcActorRetarget( ...
+                state.ddcActor, offsets, ...
+                state.metadata.centerFrequencyHz);
+            state.ddcActor = radio.live.ddcActorAttachRing( ...
+                state.ddcActor, state.sharedIqRing, ...
+                ringSnapshot.nextSequence, ringSnapshot.sourceSampleEnd);
+            return;
+        end
+        if ~isempty(state.ddcActor)
+            state.ddcActor = radio.live.ddcActorStop(state.ddcActor);
+        end
+        ddcState = struct( ...
+            'buildOnWorker', true, ...
+            'initialConfigured', true, ...
+            'inputSampleRateHz', state.metadata.sampleRateHz, ...
+            'frequencyOffsetsHz', double(offsets(:)), ...
+            'config', tunedConfig, ...
+            'inputCenterFrequencyHz', ...
+                state.metadata.centerFrequencyHz, ...
+            'capacity', options.MaxCarrierPaths, ...
+            'prewarm', logical(options.PrewarmDdc));
+        [pool, info] = radio.stream.acquireParallelPool( ...
+            'NumWorkers', runtimeWorkerCount(), ...
+            'PoolType', options.PoolType, ...
+            'AllowCreate', false);
+        if isempty(pool) || ~info.available || ...
+                pool.NumWorkers <= options.NumWorkers
+            error('radio_live_frontend:AsyncDdcPool', ...
+                ['The separated DDC consumer requires %d protocol workers ', ...
+                 'plus at least one reserved process worker.'], ...
+                options.NumWorkers);
+        end
+        state.ddcActor = radio.live.ddcActorStart( ...
+            pool, ddcState, 'MaxQueueSec', options.DecoderQueueLimitSec);
+        state.ddcActor = radio.live.ddcActorAttachRing( ...
+            state.ddcActor, state.sharedIqRing, ...
+            ringSnapshot.nextSequence, ringSnapshot.sourceSampleEnd);
     end
 
     function pollScannerBuild()
@@ -745,8 +1267,11 @@ end
         end
         state.decoderQueueSamples = state.decoderQueueSamples + ...
             uint64(numel(chunk.iq));
-        queueSec = double(state.decoderQueueSamples) / ...
-            state.metadata.sampleRateHz;
+        queueSamples = state.decoderQueueSamples;
+        if state.asyncEnabled
+            queueSamples = asyncDecoderQueueSamples();
+        end
+        queueSec = double(queueSamples) / state.metadata.sampleRateHz;
         if queueSec <= options.DecoderQueueLimitSec, return; end
         discardDecoder('decoder_queue_overrun');
         setMode('ERROR');
@@ -919,16 +1444,24 @@ end
             end
         end
         drainDecoderQueue(inf, inf);
+        if state.asyncEnabled
+            pollAsyncDdc();
+            drainAsyncDdcResults(inf, inf);
+        end
         if ~isempty(state.scanner) && ~state.scanner.finalized
             setMode('FINALIZING');
             previousPduCount = numel(state.pdus);
             [state.scanner, ~] = ...
-                radio.tuned.multiStreamScannerFinalize(state.scanner);
+                radio.tuned.multiStreamScannerFinalize(state.scanner, ...
+                    'FlushDdc', ~state.asyncEnabled);
             state.pdus = state.scanner.pdus;
             if numel(state.pdus) > previousPduCount
                 printPdus(state.pdus(previousPduCount+1:end));
             end
             pduLabel.Text = sprintf('%d', numel(state.pdus));
+        end
+        if state.asyncEnabled && ~isempty(state.ddcActor)
+            state.ddcActor = radio.live.ddcActorStop(state.ddcActor);
         end
         closeSource();
         setMode('COMPLETED');
@@ -1020,6 +1553,8 @@ end
                 protocols{k} = state.scanner.channels{k}.lastSelectedProtocol;
                 states{k} = state.scanner.channels{k}.coordinator.state;
             end
+            decoderCounts = max(1, ...
+                double(state.scanner.decoderCompletionCount));
             scannerSummary = struct( ...
                 'channelCount', state.scanner.channelCount, ...
                 'selectedProtocols', {protocols}, ...
@@ -1033,6 +1568,16 @@ end
                 'meanDdcElapsedSec', state.scanner.totalDdcElapsedSec / ...
                     max(1, double(state.scanner.feedCount)), ...
                 'maxDdcElapsedSec', state.scanner.maxDdcElapsedSec, ...
+                'decoderCompletionCount', ...
+                    state.scanner.decoderCompletionCount, ...
+                'meanDecoderComputeSec', ...
+                    state.scanner.totalDecoderComputeSec ./ decoderCounts, ...
+                'maxDecoderComputeSec', ...
+                    state.scanner.maxDecoderComputeSec, ...
+                'meanDecoderDispatchSec', ...
+                    state.scanner.totalDecoderDispatchSec ./ decoderCounts, ...
+                'maxDecoderDispatchSec', ...
+                    state.scanner.maxDecoderDispatchSec, ...
                 'finalized', state.scanner.finalized);
         end
         sourceNextSample = uint64(0);
@@ -1042,16 +1587,74 @@ end
             sourceTerminal = state.source.terminal;
         end
         decoderQueueSec = 0;
+        queueSamples = uint64(0);
         if ~isempty(state.metadata)
-            decoderQueueSec = double(state.decoderQueueSamples) / ...
+            queueSamples = state.decoderQueueSamples;
+            if state.asyncEnabled
+                queueSamples = asyncDecoderQueueSamples();
+            end
+            decoderQueueSec = double(queueSamples) / ...
                 state.metadata.sampleRateHz;
+        end
+        producerQueueSec = 0;
+        spectrumDroppedChunks = uint64(0);
+        ddcPendingSamples = uint64(0);
+        ddcMeanComputeSec = 0;
+        ddcMaxComputeSec = 0;
+        ddcReady = false;
+        ddcProcessedSamples = uint64(0);
+        ddcRingAttached = false;
+        ddcRingDrained = false;
+        if state.asyncEnabled && ~isempty(state.producerActor)
+            producerQueueSec = double(asyncProducerRelaySamples()) / ...
+                state.metadata.sampleRateHz;
+        end
+        if state.asyncEnabled && ~isempty(state.producerActor) && ...
+                state.producerActor.directFanout
+            spectrumDroppedChunks = ...
+                state.producerActor.spectrumDroppedChunks;
+        elseif state.asyncEnabled && ~isempty(state.spectrumActor)
+            spectrumDroppedChunks = state.spectrumActor.droppedChunkCount;
+        end
+        if state.asyncEnabled && ~isempty(state.ddcActor)
+            ddcPendingSamples = asyncDecoderQueueSamples();
+            ddcReady = state.ddcActor.ready;
+            ddcProcessedSamples = state.ddcActor.processedInputSamples;
+            if state.ddcActor.computeCount > 0
+                ddcMeanComputeSec = state.ddcActor.totalComputeSec / ...
+                    double(state.ddcActor.computeCount);
+            end
+            ddcMaxComputeSec = state.ddcActor.maxComputeSec;
+            ddcRingAttached = state.ddcActor.ringAttached;
+            ddcRingDrained = state.ddcActor.ringDrained;
         end
         public = struct('mode', state.mode, 'metadata', state.metadata, ...
             'selections', state.selections, 'scanner', scannerSummary, ...
             'pdus', state.pdus, 'spectrum', state.snapshot, ...
             'decoderPending', ~isempty(state.scannerBuildFuture), ...
-            'decoderQueueSamples', state.decoderQueueSamples, ...
+            'decoderQueueSamples', queueSamples, ...
             'decoderQueueSec', decoderQueueSec, ...
+            'asyncFrontend', state.asyncEnabled, ...
+            'producerQueueSec', producerQueueSec, ...
+            'spectrumDroppedChunks', spectrumDroppedChunks, ...
+            'ddcPendingSamples', ddcPendingSamples, ...
+            'ddcMeanComputeSec', ddcMeanComputeSec, ...
+            'ddcMaxComputeSec', ddcMaxComputeSec, ...
+            'ddcReady', ddcReady, ...
+            'ddcProcessedSamples', ddcProcessedSamples, ...
+            'sharedIqRing', ~isempty(state.sharedIqRing), ...
+            'ddcRingAttached', ddcRingAttached, ...
+            'ddcRingDrained', ddcRingDrained, ...
+            'maxProducerLagSec', state.maxProducerLagSec, ...
+            'maxProducerQueueSec', state.maxProducerQueueSec, ...
+            'maxDdcInputQueueSec', state.maxDdcInputQueueSec, ...
+            'maxDdcResultQueueSec', state.maxDdcResultQueueSec, ...
+            'maxDecoderPipelineQueueSec', ...
+                state.maxDecoderPipelineQueueSec, ...
+            'meanAsyncCoordinatorSec', ...
+                state.asyncCoordinatorTotalSec / max(1, ...
+                    double(state.asyncCoordinatorCount)), ...
+            'maxAsyncCoordinatorSec', state.asyncCoordinatorMaxSec, ...
             'decoderRequestedSample', state.scannerRequestedSample, ...
             'decoderReadySample', state.scannerReadySample, ...
             'sourceNextSample', sourceNextSample, ...
@@ -1085,6 +1688,27 @@ end
     end
 
     function closeSource()
+        if isfield(state, 'asyncEnabled') && state.asyncEnabled
+            if isfield(state, 'producerActor') && ...
+                    ~isempty(state.producerActor)
+                state.producerActor = ...
+                    radio.live.fileProducerStop(state.producerActor);
+            end
+            if isfield(state, 'spectrumActor') && ...
+                    ~isempty(state.spectrumActor)
+                state.spectrumActor = ...
+                    radio.live.spectrumActorStop(state.spectrumActor);
+            end
+            if ~isempty(state.source) && isstruct(state.source)
+                state.source.closed = true;
+            end
+            if isfield(state, 'sharedIqRing') && ...
+                    ~isempty(state.sharedIqRing)
+                radio.live.sharedIqRingDelete(state.sharedIqRing);
+                state.sharedIqRing = [];
+            end
+            return;
+        end
         if ~isempty(state.source) && isstruct(state.source) && ...
                 isfield(state.source, 'closed') && ~state.source.closed
             state.source = radio.replay.fileLoopSourceClose(state.source);
@@ -1093,6 +1717,37 @@ end
 
     function discardDecoder(reason)
         upgradeState();
+        preserveDdc = state.asyncEnabled && ...
+            strcmp(char(reason), 'carrier_selection_cleared');
+        if state.asyncEnabled && ~isempty(state.producerActor) && ...
+                ~state.producerActor.sharedRingEnabled
+            state.producerActor = radio.live.fileProducerDetachDecoder( ...
+                state.producerActor);
+        end
+        if state.asyncEnabled && ~isempty(state.ddcActor)
+            if preserveDdc
+                state.ddcActor = radio.live.ddcActorReset(state.ddcActor);
+                token = tic;
+                while state.ddcActor.resetPending && ...
+                        ~state.ddcActor.failed && toc(token) < 2
+                    [state.ddcActor, ~] = radio.live.ddcActorPoll( ...
+                        state.ddcActor, 'MaxEvents', inf);
+                    if state.ddcActor.resetPending, pause(0.001); end
+                end
+                if state.ddcActor.resetPending || state.ddcActor.failed
+                    state.ddcActor = ...
+                        radio.live.ddcActorStop(state.ddcActor);
+                    state.ddcActor = [];
+                end
+            else
+                state.ddcActor = radio.live.ddcActorStop(state.ddcActor);
+                state.ddcActor = [];
+            end
+        end
+        state.ddcResultQueue = cell(0, 1);
+        state.ddcResultQueueHead = 1;
+        state.ddcResultQueueSamples = uint64(0);
+        state.ddcFlushComplete = false;
         if ~isempty(state.scannerBuildFuture)
             try, cancel(state.scannerBuildFuture); catch, end
         end
@@ -1177,6 +1832,63 @@ end
         if ~isfield(state, 'preparedFusedDdcState')
             state.preparedFusedDdcState = [];
         end
+        if ~isfield(state, 'asyncEnabled')
+            state.asyncEnabled = false;
+        end
+        if ~isfield(state, 'producerActor')
+            state.producerActor = [];
+        end
+        if ~isfield(state, 'spectrumActor')
+            state.spectrumActor = [];
+        end
+        if ~isfield(state, 'ddcActor')
+            state.ddcActor = [];
+        end
+        if ~isfield(state, 'sharedIqRing')
+            state.sharedIqRing = [];
+        end
+        if ~isfield(state, 'producerRunning')
+            state.producerRunning = false;
+        end
+        if ~isfield(state, 'producerTerminal')
+            state.producerTerminal = false;
+        end
+        if ~isfield(state, 'ddcResultQueue')
+            state.ddcResultQueue = cell(0, 1);
+        end
+        if ~isfield(state, 'ddcResultQueueHead')
+            state.ddcResultQueueHead = 1;
+        end
+        if ~isfield(state, 'ddcResultQueueSamples')
+            state.ddcResultQueueSamples = uint64(0);
+        end
+        if ~isfield(state, 'ddcFlushComplete')
+            state.ddcFlushComplete = false;
+        end
+        if ~isfield(state, 'maxProducerLagSec')
+            state.maxProducerLagSec = 0;
+        end
+        if ~isfield(state, 'maxProducerQueueSec')
+            state.maxProducerQueueSec = 0;
+        end
+        if ~isfield(state, 'maxDdcInputQueueSec')
+            state.maxDdcInputQueueSec = 0;
+        end
+        if ~isfield(state, 'maxDdcResultQueueSec')
+            state.maxDdcResultQueueSec = 0;
+        end
+        if ~isfield(state, 'maxDecoderPipelineQueueSec')
+            state.maxDecoderPipelineQueueSec = 0;
+        end
+        if ~isfield(state, 'asyncCoordinatorCount')
+            state.asyncCoordinatorCount = uint64(0);
+        end
+        if ~isfield(state, 'asyncCoordinatorTotalSec')
+            state.asyncCoordinatorTotalSec = 0;
+        end
+        if ~isfield(state, 'asyncCoordinatorMaxSec')
+            state.asyncCoordinatorMaxSec = 0;
+        end
         if ~isfield(state, 'clockBaseSample')
             state.clockBaseSample = uint64(0);
         end
@@ -1230,10 +1942,27 @@ end
         state.clockToken = tic;
         state.inputLagSec = 0;
         state.lastUiUpdateSec = 0;
+        if state.asyncEnabled && ~isempty(state.producerActor)
+            state.producerActor = radio.live.fileProducerCommand( ...
+                state.producerActor, 'run');
+            state.producerRunning = true;
+        end
     end
 
     function stopTimer()
         if isTimerRunning(), stop(state.timer); end
+        if isfield(state, 'asyncEnabled') && state.asyncEnabled && ...
+                isfield(state, 'producerActor') && ...
+                ~isempty(state.producerActor) && state.producerRunning && ...
+                ~state.producerActor.terminal && ...
+                ~state.producerActor.failed
+            try
+                state.producerActor = radio.live.fileProducerCommand( ...
+                    state.producerActor, 'pause');
+            catch
+            end
+            state.producerRunning = false;
+        end
     end
 
     function tf = isTimerRunning()
@@ -1304,6 +2033,18 @@ validateattributes(options.DecoderCatchupChunksPerTick, {'numeric'}, ...
     {'scalar','real','finite','integer','positive'});
 validateattributes(options.DecoderCatchupBudgetSec, {'numeric'}, ...
     {'scalar','real','finite','positive'});
+validateattributes(options.DecoderCatchupMaxBudgetSec, {'numeric'}, ...
+    {'scalar','real','finite','positive'});
+if options.DecoderCatchupMaxBudgetSec < options.DecoderCatchupBudgetSec
+    error('radio_live_frontend:DecoderCatchupBudget', ...
+        'DecoderCatchupMaxBudgetSec must not be below the base budget.');
+end
+validateattributes(options.FrontendWorkerReserve, {'numeric'}, ...
+    {'scalar','real','finite','integer','positive'});
+validateattributes(options.ProducerQueueLimitSec, {'numeric'}, ...
+    {'scalar','real','finite','positive'});
+validateattributes(options.SpectrumQueueLimitChunks, {'numeric'}, ...
+    {'scalar','real','finite','integer','positive'});
 end
 
 function value = scalarOr(value, fallback)

@@ -61,6 +61,7 @@ docs/
 - [赢家缓冲追赶实现记录](records/recognition/赢家缓冲追赶实现记录.md)
 - [持续解码重叠适配层](records/recognition/持续解码重叠适配层.md)
 - [NXDN96 真正增量解码与持久 Worker 阶段记录](records/recognition/NXDN96真正增量解码与持久Worker阶段记录.md)
+- [多协议真正增量解码与持久 Worker 第二阶段记录](records/recognition/多协议真正增量解码与持久Worker第二阶段记录.md)
 - [解码健康与重新分类实现记录](records/recognition/解码健康与重新分类实现记录.md)
 - [离线多 Epoch 识别与上报实现记录](records/recognition/离线多Epoch识别与上报实现记录.md)
 

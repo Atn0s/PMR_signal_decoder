@@ -4,6 +4,7 @@ p = inputParser;
 p.addParameter('PreTriggerSec', radio.stream.defaultConfig().preTriggerSec);
 p.addParameter('EndSample', []);
 p.addParameter('Deduplicate', true);
+p.addParameter('InitialPdus', struct([]));
 p.parse(varargin{:});
 protocol = radio.normalizeProtocolNames({protocol});
 protocol = protocol{1};
@@ -37,6 +38,7 @@ try
         radio.stream.decodeProtocolWindow(protocol, snapshot);
     pdus = radio.stream.stampStreamPdus( ...
         pdus, protocol, snapshot, epoch.epochId);
+    pdus = appendPdus(p.Results.InitialPdus, pdus);
     if p.Results.Deduplicate
         pdus = radio.deduplicatePdus(pdus);
     end
@@ -44,15 +46,21 @@ try
     status = 'caught_up';
     errorReason = '';
 catch ME
-    pdus = struct([]);
+    pdus = p.Results.InitialPdus;
     diagnostics = struct();
     frequencyOffsetHz = NaN;
     timingState = struct();
-    verdict = struct('status', 'error', 'confidence', 0, ...
-        'evidenceClass', '', 'evidence', struct(), ...
-        'reason', sprintf('%s: %s', ME.identifier, ME.message));
-    status = 'decode_error';
-    errorReason = verdict.reason;
+    errorReason = sprintf('%s: %s', ME.identifier, ME.message);
+    if isempty(pdus)
+        verdict = struct('status', 'error', 'confidence', 0, ...
+            'evidenceClass', '', 'evidence', struct(), ...
+            'reason', errorReason);
+        status = 'decode_error';
+    else
+        verdict = radio.stream.evaluateProbeEvidence( ...
+            protocol, pdus, diagnostics);
+        status = 'caught_up_from_confirmed_probe';
+    end
 end
 
 result = struct( ...
@@ -75,4 +83,14 @@ result = struct( ...
     'diagnostics', diagnostics, ...
     'elapsedSec', toc(timer), ...
     'errorReason', errorReason);
+end
+
+function pdus = appendPdus(initial, decoded)
+if isempty(initial)
+    pdus = decoded;
+elseif isempty(decoded)
+    pdus = initial(:);
+else
+    pdus = [initial(:); decoded(:)];
+end
 end

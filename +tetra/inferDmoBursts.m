@@ -1,4 +1,5 @@
-function report = inferDmoBursts(bits, training, seqs, cfg, bitValidMask)
+function [report, finalContext] = inferDmoBursts( ...
+        bits, training, seqs, cfg, bitValidMask, varargin)
 %INFERDMOBURSTS Infer, classify, and extract DMO DNB/DSB payload blocks.
 if nargin < 3 || isempty(seqs)
     seqs = tetra.trainingSequences();
@@ -6,6 +7,13 @@ end
 if nargin < 4 || isempty(cfg)
     cfg = tetra.config();
 end
+p = inputParser;
+p.addParameter('BitOffset', 0);
+p.addParameter('MinimumSlotStartBit', -inf);
+p.addParameter('InitialContext', []);
+p.parse(varargin{:});
+bitOffset = double(p.Results.BitOffset);
+minimumSlotStartBit = double(p.Results.MinimumSlotStartBit);
 
 bits = bits(:) ~= 0;
 if nargin < 5 || isempty(bitValidMask) || numel(bitValidMask) ~= numel(bits)
@@ -17,7 +25,8 @@ defs = tetra.dmoBurstDefinitions(seqs, cfg);
 candidates = repmat(emptyCandidate(), 0, 1);
 
 if ~isfield(training, 'hits') || isempty(training.hits)
-    report = makeReport(candidates, defs, cfg);
+    [report, finalContext] = makeReport( ...
+        candidates, defs, cfg, p.Results.InitialContext);
     return;
 end
 
@@ -44,14 +53,37 @@ for k = 1:numel(training.hits)
             payloadBlocks = tetra.extractDmoPayload(slotBits, classification, slotStart, slotValidMask);
             link = decodeDsbSyncIfPresent(classification, payloadBlocks, cfg);
         end
-        candidates(end+1, 1) = makeCandidate(hit, def, classification, ... %#ok<AGROW>
-            slotStart, slotEnd, isComplete, bitString, dibitString, slotValidMask, payloadBlocks, link);
+        candidate = makeCandidate(hit, def, classification, ...
+            slotStart, slotEnd, isComplete, bitString, dibitString, ...
+            slotValidMask, payloadBlocks, link);
+        candidates(end+1, 1) = ... %#ok<AGROW>
+            offsetCandidate(candidate, bitOffset);
     end
 end
 
 candidates = sortCandidates(candidates);
 candidates = limitCandidates(candidates, cfg);
-report = makeReport(candidates, defs, cfg);
+if isfinite(minimumSlotStartBit) && ~isempty(candidates)
+    candidates = candidates( ...
+        [candidates.slotStartBit] >= minimumSlotStartBit);
+end
+[report, finalContext] = makeReport( ...
+    candidates, defs, cfg, p.Results.InitialContext);
+end
+
+function candidate = offsetCandidate(candidate, bitOffset)
+if bitOffset == 0, return; end
+candidate.slotStartBit = candidate.slotStartBit + bitOffset;
+candidate.slotEndBit = candidate.slotEndBit + bitOffset;
+candidate.trainingStartBit = candidate.trainingStartBit + bitOffset;
+for k = 1:numel(candidate.payloadBlocks)
+    candidate.payloadBlocks(k).slotStartBit = ...
+        candidate.payloadBlocks(k).slotStartBit + bitOffset;
+    candidate.payloadBlocks(k).absoluteStartBit = ...
+        candidate.payloadBlocks(k).absoluteStartBit + bitOffset;
+    candidate.payloadBlocks(k).absoluteEndBit = ...
+        candidate.payloadBlocks(k).absoluteEndBit + bitOffset;
+end
 end
 
 function c = emptyCandidate()
@@ -267,10 +299,12 @@ cls = struct( ...
     'bkn2LogicalChannel', def.bkn2LogicalChannel);
 end
 
-function report = makeReport(candidates, defs, cfg)
+function [report, finalContext] = makeReport( ...
+        candidates, defs, cfg, initialContext)
 bursts = confirmedBursts(candidates);
-bursts = assignTimingFromSchS(bursts);
-bursts = decodeTrafficSignalling(bursts, cfg);
+bursts = assignTimingFromSchS(bursts, initialContext);
+[bursts, finalContext] = ...
+    decodeTrafficSignalling(bursts, cfg, initialContext);
 payloadBlocks = collectPayloadBlocks(bursts);
 macBlocks = collectMacBlocks(bursts);
 report = struct();
@@ -295,15 +329,24 @@ report.schFDecodedCount = countField(bursts, 'schFOk');
 report.macPduDecodedCount = countMacPdus(macBlocks);
 report.timingAssignedCount = nnz(~isnan([bursts.frameNumber]) & ~isnan([bursts.slotNumber]));
 report.definitions = defs;
+report.finalContext = finalContext;
 end
 
-function bursts = assignTimingFromSchS(bursts)
+function bursts = assignTimingFromSchS(bursts, initialContext)
 if isempty(bursts)
     return;
 end
 refMask = [bursts.schSOk] & ~isnan([bursts.frameNumber]) & ~isnan([bursts.slotNumber]);
 refs = bursts(refMask);
-if isempty(refs)
+refStarts = [refs.slotStartBit];
+refFrames = [refs.frameNumber];
+refSlots = [refs.slotNumber];
+if validTimingContext(initialContext)
+    refStarts = [double(initialContext.slotStartBit), refStarts];
+    refFrames = [double(initialContext.frameNumber), refFrames];
+    refSlots = [double(initialContext.slotNumber), refSlots];
+end
+if isempty(refStarts)
     return;
 end
 slotBits = bursts(1).slotBits;
@@ -311,10 +354,11 @@ for k = 1:numel(bursts)
     if bursts(k).schSOk
         continue;
     end
-    deltas = round(([bursts(k).slotStartBit] - [refs.slotStartBit]) ./ slotBits);
+    deltas = round((bursts(k).slotStartBit - refStarts) ./ slotBits);
     [~, bestIdx] = min(abs(deltas));
     delta = deltas(bestIdx);
-    [fn, tn] = advanceTiming(refs(bestIdx).frameNumber, refs(bestIdx).slotNumber, delta);
+    [fn, tn] = advanceTiming( ...
+        refFrames(bestIdx), refSlots(bestIdx), delta);
     bursts(k).frameNumber = fn;
     bursts(k).slotNumber = tn;
     bursts(k).timingLabel = sprintf('FN%d TN%d', fn, tn);
@@ -323,11 +367,16 @@ for k = 1:numel(bursts)
 end
 end
 
-function bursts = decodeTrafficSignalling(bursts, cfg)
+function [bursts, context] = decodeTrafficSignalling( ...
+        bursts, cfg, initialContext)
+if isempty(initialContext)
+    context = emptyDmoContext();
+else
+    context = initialContext;
+end
 if isempty(bursts)
     return;
 end
-context = emptyDmoContext();
 for k = 1:numel(bursts)
     if bursts(k).dmacSyncOk && bursts(k).dccValid
         context = contextFromSync(bursts(k).dmacSync, bursts(k));
@@ -343,6 +392,16 @@ for k = 1:numel(bursts)
         bursts(k) = decodeNormal1SchF(bursts(k), context, cfg);
     end
 end
+end
+
+function yes = validTimingContext(context)
+yes = isstruct(context) && isscalar(context) && ...
+    isfield(context, 'valid') && logical(context.valid) && ...
+    isfield(context, 'slotStartBit') && ...
+    isfield(context, 'frameNumber') && ...
+    isfield(context, 'slotNumber') && ...
+    all(isfinite([double(context.slotStartBit), ...
+        double(context.frameNumber), double(context.slotNumber)]));
 end
 
 function burst = decodeNormal2Stch(burst, context, cfg)

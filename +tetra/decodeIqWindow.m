@@ -48,7 +48,8 @@ else
 end
 
 seqs = tetra.trainingSequences();
-[decision, training, variantReports] = bestDecisionVariant(sync, seqs, cfg);
+[decision, training, variantReports] = ...
+    tetra.bestDecisionVariant(sync, seqs, cfg);
 slotReport = tetra.inferDmoBursts(decision.bits, training, seqs, cfg, decision.bitValidMask);
 
 decodeContext = makeDecodeContext(context, iq72, fs72, coarseFoHz, ...
@@ -131,57 +132,6 @@ context.validBitCount = nnz(decision.bitValidMask);
 context.validBitRatio = safeRatio(context.validBitCount, context.bitCount);
 context.trainingCandidateCount = training.candidateCount;
 context.trainingGoodCount = training.goodCount;
-end
-
-function [bestDecision, bestTraining, variantReports] = bestDecisionVariant(sync, seqs, cfg)
-variants = {'standard', 'conjugate', 'swap_bits', 'conjugate_swap'};
-variantReports = repmat(struct( ...
-    'variant', '', ...
-    'score', 0, ...
-    'goodCount', 0, ...
-    'candidateCount', 0), 0, 1);
-bestScore = -inf;
-bestDecision = [];
-bestTraining = [];
-variantPhaseOffsets = nan(numel(variants), 1);
-for k = 1:numel(variants)
-    phaseOffset = [];
-    if k == 3
-        % Conjugation changes the observed differential phase and needs its
-        % own search.  Bit swapping does not, so reuse the corresponding
-        % standard/conjugate result instead of repeating the 91-point grid.
-        phaseOffset = variantPhaseOffsets(1);
-    elseif k == 4
-        phaseOffset = variantPhaseOffsets(2);
-    end
-    decision = tetra.pi4dqpskDecision(sync.symbols, ...
-        'Variant', variants{k}, ...
-        'PhaseOffsetRad', phaseOffset, ...
-        'PhaseOffsetStepRad', cfg.diffPhaseOffsetStepRad, ...
-        'PhaseOffsetMaxTransitions', cfg.diffPhaseSearchMaxTransitions, ...
-        'ValidTransitionMask', sync.validTransitionMask);
-    variantPhaseOffsets(k) = decision.phaseOffsetRad;
-    training = tetra.findTrainingSequences(decision.bits, seqs, cfg);
-    variantReports(end+1, 1) = struct( ... %#ok<AGROW>
-        'variant', variants{k}, ...
-        'score', training.score, ...
-        'goodCount', training.goodCount, ...
-        'candidateCount', training.candidateCount);
-    score = training.score + 1000 * training.goodCount + 100 * training.candidateCount;
-    if score > bestScore
-        bestScore = score;
-        bestDecision = decision;
-        bestTraining = training;
-    end
-end
-if isempty(bestDecision)
-    bestDecision = tetra.pi4dqpskDecision(sync.symbols, ...
-        'Variant', 'standard', ...
-        'PhaseOffsetStepRad', cfg.diffPhaseOffsetStepRad, ...
-        'PhaseOffsetMaxTransitions', cfg.diffPhaseSearchMaxTransitions, ...
-        'ValidTransitionMask', sync.validTransitionMask);
-    bestTraining = tetra.findTrainingSequences(bestDecision.bits, seqs, cfg);
-end
 end
 
 function r = safeRatio(n, d)

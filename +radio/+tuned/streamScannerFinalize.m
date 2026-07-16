@@ -8,27 +8,35 @@ p.addParameter('PollIntervalSec', 0.020);
 p.addParameter('FlushDdc', true);
 p.parse(varargin{:});
 if scanner.finalized
-    report = buildReport(scanner);
+    report = buildReport(scanner, emptyDecoderMetrics());
     return;
 end
+decoderMetrics = emptyDecoderMetrics();
 
+if p.Results.FlushDdc && radio.getField(scanner, 'externalBaseband', false)
+    error('radio:tuned:streamScannerFinalize:ExternalDdc', ...
+        'An external-baseband scanner must use FlushDdc=false.');
+end
 if p.Results.FlushDdc
     [scanner.ddc, flushChunk] = radio.tuned.ddcFlush(scanner.ddc);
     [scanner, readyChunks] = ...
         radio.tuned.streamScannerQueueBaseband(scanner, flushChunk);
-    scanner = feedChunks(scanner, readyChunks);
+    [scanner, metrics] = feedChunks(scanner, readyChunks);
+    decoderMetrics = appendStruct(decoderMetrics, metrics);
 end
 [scanner, finalChunks] = radio.tuned.streamScannerQueueBaseband( ...
     scanner, [], 'Flush', true);
-scanner = feedChunks(scanner, finalChunks);
+[scanner, metrics] = feedChunks(scanner, finalChunks);
+decoderMetrics = appendStruct(decoderMetrics, metrics);
 
 validateattributes(p.Results.TaskTimeoutSec, {'numeric'}, ...
     {'scalar', 'real', 'finite', 'nonnegative'});
 validateattributes(p.Results.PollIntervalSec, {'numeric'}, ...
     {'scalar', 'real', 'finite', 'positive'});
 if p.Results.WaitForTasks
-    [scanner, waitElapsedSec, waitTimedOut] = awaitActiveTasks( ...
+    [scanner, waitElapsedSec, waitTimedOut, metrics] = awaitActiveTasks( ...
         scanner, p.Results.TaskTimeoutSec, p.Results.PollIntervalSec);
+    decoderMetrics = appendStruct(decoderMetrics, metrics);
     scanner.finalizeTaskWaitElapsedSec = waitElapsedSec;
     scanner.finalizeTaskWaitTimedOut = waitTimedOut;
 end
@@ -56,17 +64,20 @@ while remaining > 0
         'CenterFrequencyHz', scanner.targetCenterFrequencyHz);
     scanner.basebandNextSequenceNumber = ...
         scanner.basebandNextSequenceNumber + uint64(1);
-    [scanner, ~, ~, ~] = ...
+    [scanner, coordinatorOutput, ~, ~] = ...
         radio.tuned.streamScannerCoordinatorFeed(scanner, chunk);
+    decoderMetrics = appendStruct(decoderMetrics, ...
+        radio.tuned.decoderMetricFromCoordinatorOutput(coordinatorOutput));
     remaining = remaining - count;
 end
 scanner.finalized = true;
-report = buildReport(scanner);
+report = buildReport(scanner, decoderMetrics);
 end
 
-function [scanner, elapsedSec, timedOut] = awaitActiveTasks( ...
+function [scanner, elapsedSec, timedOut, decoderMetrics] = awaitActiveTasks( ...
         scanner, timeoutSec, pollIntervalSec)
 token = tic;
+decoderMetrics = emptyDecoderMetrics();
 while hasActiveTask(scanner.coordinator) && toc(token) < timeoutSec
     chunk = radio.stream.makeIqChunk( ...
         complex(zeros(0, 1)), scanner.basebandSampleRateHz, ...
@@ -76,8 +87,10 @@ while hasActiveTask(scanner.coordinator) && toc(token) < timeoutSec
         'CenterFrequencyHz', scanner.targetCenterFrequencyHz);
     scanner.basebandNextSequenceNumber = ...
         scanner.basebandNextSequenceNumber + uint64(1);
-    [scanner, ~, ~, ~] = ...
+    [scanner, coordinatorOutput, ~, ~] = ...
         radio.tuned.streamScannerCoordinatorFeed(scanner, chunk);
+    decoderMetrics = appendStruct(decoderMetrics, ...
+        radio.tuned.decoderMetricFromCoordinatorOutput(coordinatorOutput));
     if hasActiveTask(scanner.coordinator)
         pause(pollIntervalSec);
     end
@@ -92,14 +105,17 @@ tf = ~isempty(coordinator.activeRace) || ...
     ~isempty(coordinator.activeDecode);
 end
 
-function scanner = feedChunks(scanner, chunks)
+function [scanner, decoderMetrics] = feedChunks(scanner, chunks)
+decoderMetrics = emptyDecoderMetrics();
 for k = 1:numel(chunks)
-    [scanner, ~, ~, ~] = ...
+    [scanner, coordinatorOutput, ~, ~] = ...
         radio.tuned.streamScannerCoordinatorFeed(scanner, chunks{k});
+    decoderMetrics = appendStruct(decoderMetrics, ...
+        radio.tuned.decoderMetricFromCoordinatorOutput(coordinatorOutput));
 end
 end
 
-function report = buildReport(scanner)
+function report = buildReport(scanner, decoderMetrics)
 protocols = {};
 if ~isempty(scanner.pdus), protocols = unique({scanner.pdus.protocol}, 'stable'); end
 selectedProtocol = scanner.coordinator.selectedProtocol;
@@ -127,6 +143,18 @@ report = struct( ...
     'poolInfo', scanner.poolInfo, ...
     'finalizeTaskWaitElapsedSec', scanner.finalizeTaskWaitElapsedSec, ...
     'finalizeTaskWaitTimedOut', scanner.finalizeTaskWaitTimedOut, ...
+    'decoderMetrics', decoderMetrics, ...
     'elapsedSec', toc(scanner.timerToken), ...
     'finalized', scanner.finalized);
+end
+
+function values = emptyDecoderMetrics()
+values = repmat(struct( ...
+    'protocol', '', 'computeSec', 0, 'dispatchSec', 0, ...
+    'newPduCount', 0, 'mode', ''), 0, 1);
+end
+
+function value = appendStruct(value, items)
+if isempty(items), return; end
+if isempty(value), value = items(:); else, value = [value(:); items(:)]; end
 end

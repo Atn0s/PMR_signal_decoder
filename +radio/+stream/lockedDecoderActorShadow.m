@@ -12,5 +12,10 @@ if isfield(shadow, 'incremental')
     if isfield(shadow.incremental, 'nativeSeed')
         shadow.incremental.nativeSeed = [];
     end
+    if isfield(shadow.incremental, 'lastDiagnostics')
+        shadow.incremental.lastDiagnostics = ...
+            radio.stream.compactDecoderDiagnostics( ...
+                shadow.incremental.lastDiagnostics);
+    end
 end
 end
