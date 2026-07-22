@@ -1,6 +1,6 @@
 function report = runP25Streaming()
 %RUNP25STREAMING Validate causal P25 state across arbitrary IQ chunks.
-path = fullfile(pybackend.defaultPythonRoot(), 'data', ...
+path = fullfile(common.sampleDataRoot(), ...
     'p25_1_78125.rawiq');
 if exist(path, 'file') ~= 2
     fprintf('[SKIP] P25 streaming sample is not present.\n');

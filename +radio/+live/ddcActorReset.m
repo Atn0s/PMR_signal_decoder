@@ -8,19 +8,14 @@ else
     actor.pendingMessages{end+1, 1} = message;
 end
 actor.resetPending = true;
-actor.configured = false;
-actor.retargetPending = false;
-actor.flushRequested = false;
 actor.flushed = false;
 actor.ringAttached = false;
 actor.ringDrained = false;
-actor.ringStartSequence = uint64(0);
 actor.ringReadSequence = uint64(0);
 actor.ringWriteSequence = uint64(0);
 actor.ringSourceSampleEnd = uint64(0);
 actor.ringConsumedSampleEnd = uint64(0);
 actor.pendingInputSamples = uint64(0);
-actor.maxPendingInputSamples = uint64(0);
 actor.processedInputSamples = uint64(0);
 actor.computeCount = uint64(0);
 actor.totalComputeSec = 0;

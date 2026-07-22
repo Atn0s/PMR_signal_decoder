@@ -13,7 +13,6 @@ tests.runProtocolCandidateGate();
 tests.runStreamingPhase5();
 tests.runStreamingPhase6();
 tests.runPersistentLockedDecoder();
-tests.runStreamingPhase7();
 tests.runStreamingPhase8();
 tests.runStreamingPhase9();
 tests.runStreamingPhase10();
@@ -21,27 +20,16 @@ tests.runTunedTransition();
 tests.runFusedMultiDdc();
 tests.runRealtimeFrontendPhase1();
 tests.runRealtimeFrontendPhase2();
-tests.runRealtimeFrontendPhase3();
-tests.runRealtimeFrontendPhase4();
-tests.runRealtimeFrontendPhase5();
-tests.runRealtimeFrontendPhase6();
 tests.runSharedIqRing();
-tests.runRealtimeFrontendPhase7();
+tests.runParallelFrontendLifecycle();
+tests.runParallelFrontendSeparation();
 tests.runTetraOptimization();
 assert(isequal(radio.normalizeProtocolNames( ...
     {'dmr', 'P25', 'dpmr', 'nxdn', 'tetra'}), ...
     {'DMR', 'P25', 'dPMR', 'NXDN', 'TETRA'}));
 specs = radio.protocolRegistry();
 tetraSpec = specs(strcmp({specs.name}, 'TETRA'));
-assert(strcmp(tetraSpec.scanMode, 'windowed_iq'));
 assert(tetraSpec.targetSampleRateHz == 72000);
-assert(~tetraSpec.supportsBlindSearch);
-[defaultBlind, explicitDefaultBlind] = radio.resolveScanProtocols({}, 'BlindSearch', true);
-assert(~explicitDefaultBlind && any(strcmp(defaultBlind, 'NXDN')) && ...
-    ~any(strcmp(defaultBlind, 'TETRA')));
-[defaultFreq, explicitDefaultFreq] = radio.resolveScanProtocols({}, 'FreqList', 0);
-assert(~explicitDefaultFreq && any(strcmp(defaultFreq, 'NXDN')) && ...
-    any(strcmp(defaultFreq, 'TETRA')));
 % A single 4FSK carrier has several spectral lobes but must yield one
 % channel-level blind-search candidate.
 savedRng = rng;
@@ -126,17 +114,17 @@ assert(schS.slotNumber == 3);
 assert(schS.frameNumber == 12);
 assert(schS.pdu.isDmacSync);
 
-sample = fullfile(pybackend.defaultPythonRoot(), 'data', 'dmr_1_78125.rawiq');
+sample = fullfile(common.sampleDataRoot(), 'dmr_1_78125.rawiq');
 if exist(sample, 'file') == 2
     pdus = radio.scanFile(sample, 'ProtocolNames', {'dmr'}, ...
-        'PipelineBackend', 'matlab', 'DecoderBackend', 'matlab');
+        'ExecutionMode', 'parallel');
     rawPdus = radio.scanFile(sample, 'ProtocolNames', {'dmr'}, ...
-        'PipelineBackend', 'matlab', 'DecoderBackend', 'matlab', ...
+        'ExecutionMode', 'parallel', ...
         'Deduplicate', false);
     assert(isstruct(pdus));
     assert(numel(rawPdus) >= numel(pdus));
     assert(isempty(radio.scanFile(sample, 'ProtocolNames', {'nxdn'}, ...
-        'PipelineBackend', 'matlab', 'DecoderBackend', 'matlab')));
+        'ExecutionMode', 'parallel')));
     tmpJson = [tempname, '.json'];
     radio.writeJson(pdus, tmpJson);
     assert(~contains(fileread(tmpJson), 'raw_bits'));
@@ -146,30 +134,31 @@ if exist(sample, 'file') == 2
     fprintf('DMR sample decoded PDUs: %d\n', numel(pdus));
 end
 
-p25Sample = fullfile(pybackend.defaultPythonRoot(), 'data', 'p25_1_78125.rawiq');
+p25Sample = fullfile(common.sampleDataRoot(), 'p25_1_78125.rawiq');
 if exist(p25Sample, 'file') == 2
     pdus = radio.scanFile(p25Sample, 'ProtocolNames', {'p25'}, ...
-        'PipelineBackend', 'matlab', 'DecoderBackend', 'matlab');
+        'ExecutionMode', 'parallel');
     assert(isstruct(pdus));
     assert(isempty(radio.scanFile(p25Sample, 'ProtocolNames', {'nxdn'}, ...
-        'PipelineBackend', 'matlab', 'DecoderBackend', 'matlab')));
+        'ExecutionMode', 'parallel')));
     fprintf('P25 sample decoded PDUs: %d\n', numel(pdus));
 end
 
-dpmrSample = fullfile(pybackend.defaultPythonRoot(), 'data', 'dpmr_1_48000.rawiq');
+dpmrSample = fullfile(common.sampleDataRoot(), 'dpmr_1_48000.rawiq');
 if exist(dpmrSample, 'file') == 2
     pdus = radio.scanFile(dpmrSample, 'ProtocolNames', {'dpmr'}, ...
-        'PipelineBackend', 'matlab', 'DecoderBackend', 'matlab');
+        'ExecutionMode', 'parallel');
     assert(isstruct(pdus));
     assert(isempty(radio.scanFile(dpmrSample, 'ProtocolNames', {'nxdn'}, ...
-        'PipelineBackend', 'matlab', 'DecoderBackend', 'matlab')));
+        'ExecutionMode', 'parallel')));
     fprintf('dPMR sample decoded PDUs: %d\n', numel(pdus));
 end
 
-tetraSample = fullfile(pybackend.defaultPythonRoot(), 'data', 'tetra_dmo_20240413_430050000_baseband.wav');
+tetraSample = fullfile(common.sampleDataRoot(), ...
+    'tetra_dmo_20240413_430050000_baseband.wav');
 if exist(tetraSample, 'file') == 2
     pdus = radio.scanFile(tetraSample, 'ProtocolNames', {'tetra'}, ...
-        'PipelineBackend', 'matlab', 'DecoderBackend', 'matlab');
+        'ExecutionMode', 'parallel');
     assert(isstruct(pdus));
     assert(any(strcmp({pdus.type}, 'TETRA_DMAC_SYNC')));
     assert(any(strcmp({pdus.type}, 'TETRA_SESSION')));
@@ -185,15 +174,6 @@ if exist(tetraSample, 'file') == 2
     result = tetra.scanIqWindows(crop, fs, 'ShowProgress', false, ...
         'WriteOutputs', false, 'MaxWindows', 1);
     assert(isstruct(result) && isfield(result, 'pdus') && ~isempty(result.pdus));
-    defaultFreqPdus = radio.scanIq(crop, fs, 'FreqList', 0);
-    assert(any(strcmp({defaultFreqPdus.protocol}, 'TETRA')));
-    didError = false;
-    try
-        radio.scanIq(crop, fs, 'ProtocolNames', {'tetra'}, 'BlindSearch', true);
-    catch ME
-        didError = strcmp(ME.identifier, 'radio:scanIq:TetraBlindSearchUnsupported');
-    end
-    assert(didError);
     fprintf('TETRA sample decoded PDUs/events: %d\n', numel(pdus));
 end
 

@@ -5,20 +5,13 @@ p.addParameter('ProtocolNames', {});
 p.addParameter('SampleRate', []);
 p.addParameter('IqDType', 'int16');
 p.addParameter('FreqList', []);
-p.addParameter('BlindSearch', false);
-p.addParameter('PipelineBackend', 'matlab');
-p.addParameter('DecoderBackend', 'matlab');
-p.addParameter('PythonRoot', '');
-p.addParameter('PythonExecutable', '');
 p.addParameter('Deduplicate', true);
 p.addParameter('CreateFigure', true);
 p.addParameter('ShowProgress', false);
-p.addParameter('ExecutionMode', 'serial');
+p.addParameter('ExecutionMode', 'parallel');
 p.addParameter('StreamConfig', radio.stream.defaultConfig());
-p.addParameter('ParallelMode', 'parallel');
-p.addParameter('ParallelNumWorkers', 5);
-p.addParameter('ParallelPoolType', 'processes');
-p.addParameter('ParallelTimeoutSec', 120);
+p.addParameter('NumWorkers', 5);
+p.addParameter('TimeoutSec', 120);
 p.parse(varargin{:});
 
 iq = common.readRawIq(path, 'DType', p.Results.IqDType);
@@ -33,11 +26,10 @@ end
 
 cfg = radio.defaultConfig();
 [previewIq, previewFs, previewFo, candidates] = preparePreviewIq( ...
-    iq, fs, p.Results.FreqList, p.Results.BlindSearch, cfg);
+    iq, fs, p.Results.FreqList, cfg);
 
-[enabled, ~] = radio.resolveScanProtocols(p.Results.ProtocolNames, ...
-    'FreqList', p.Results.FreqList, ...
-    'BlindSearch', p.Results.BlindSearch);
+probes = radio.stream.probeRegistry(p.Results.ProtocolNames);
+enabled = {probes.name};
 frontProtocol = enabled{1};
 frontendError = '';
 try
@@ -52,19 +44,12 @@ end
     'SampleRate', p.Results.SampleRate, ...
     'IqDType', p.Results.IqDType, ...
     'FreqList', p.Results.FreqList, ...
-    'BlindSearch', p.Results.BlindSearch, ...
-    'PipelineBackend', p.Results.PipelineBackend, ...
-    'DecoderBackend', p.Results.DecoderBackend, ...
-    'PythonRoot', p.Results.PythonRoot, ...
-    'PythonExecutable', p.Results.PythonExecutable, ...
     'Deduplicate', p.Results.Deduplicate, ...
     'ShowProgress', p.Results.ShowProgress, ...
     'ExecutionMode', p.Results.ExecutionMode, ...
     'StreamConfig', p.Results.StreamConfig, ...
-    'ParallelMode', p.Results.ParallelMode, ...
-    'ParallelNumWorkers', p.Results.ParallelNumWorkers, ...
-    'ParallelPoolType', p.Results.ParallelPoolType, ...
-    'ParallelTimeoutSec', p.Results.ParallelTimeoutSec);
+    'NumWorkers', p.Results.NumWorkers, ...
+    'TimeoutSec', p.Results.TimeoutSec);
 
 if isfield(scanReport, 'protocolNames')
     enabled = scanReport.protocolNames;
@@ -89,17 +74,13 @@ if p.Results.CreateFigure
 end
 end
 
-function [previewIq, previewFs, previewFo, candidates] = preparePreviewIq(iq, fs, freqList, blindSearch, cfg)
+function [previewIq, previewFs, previewFo, candidates] = ...
+        preparePreviewIq(iq, fs, freqList, cfg)
 previewFo = 0.0;
 candidates = [];
 if ~isempty(freqList)
     previewFo = freqList(1);
     candidates = freqList(:).';
-elseif blindSearch
-    candidates = radio.psdBlindSearch(iq, fs, cfg);
-    if ~isempty(candidates)
-        previewFo = candidates(1);
-    end
 end
 
 t = (0:numel(iq)-1).' ./ fs;

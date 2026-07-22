@@ -29,13 +29,10 @@ else
 end
 actor.ringAttached = true;
 actor.ringDrained = false;
-actor.ringStartSequence = uint64(startSequence);
 actor.ringReadSequence = uint64(startSequence) - uint64(1);
 actor.ringWriteSequence = uint64(startSequence) - uint64(1);
 actor.ringSourceSampleEnd = uint64(startSourceSample);
 actor.ringConsumedSampleEnd = uint64(startSourceSample);
 actor.pendingInputSamples = uint64(0);
-actor.maxPendingInputSamples = uint64(0);
 actor.flushed = false;
-actor.flushRequested = false;
 end

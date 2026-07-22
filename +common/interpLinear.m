@@ -1,5 +1,5 @@
 function out = interpLinear(arr, pos)
-%INTERPLINEAR Linear interpolation using Python-compatible zero-based positions.
+%INTERPLINEAR Linear interpolation at zero-based sample positions.
 arr = arr(:);
 pos = pos(:);
 if numel(arr) < 2
@@ -12,4 +12,3 @@ i0 = max(0, min(i0, numel(arr) - 2));
 idx = i0 + 1;
 out = arr(idx) .* (1 - frac) + arr(idx + 1) .* frac;
 end
-

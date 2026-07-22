@@ -26,7 +26,7 @@ p.addParameter('TargetSignalRms', 0.12);
 p.addParameter('FadeSec', 0.005);
 p.addParameter('PeakFraction', 0.90);
 p.addParameter('RandomSeed', 2505);
-p.addParameter('PythonRoot', pybackend.defaultPythonRoot());
+p.addParameter('SampleRoot', common.sampleDataRoot());
 p.addParameter('NxdnRoot', fullfile(projectRoot(), 'signal_data'));
 p.addParameter('Overwrite', false);
 p.addParameter('WriteManifest', true);
@@ -39,7 +39,7 @@ outputPath = absolutePath(char(options.OutputPath));
 manifestPath = [outputPath, '.json'];
 ensureWritableTarget(outputPath, manifestPath, options);
 
-specs = defaultSpecs(char(options.PythonRoot), char(options.NxdnRoot));
+specs = defaultSpecs(char(options.SampleRoot), char(options.NxdnRoot));
 for k = 1:numel(specs)
     specs(k).channelId = k;
     specs(k).outputStartSec = options.OnsetSec + ...
@@ -169,8 +169,7 @@ end
 clear rngCleanup;
 end
 
-function specs = defaultSpecs(pythonRoot, nxdnRoot)
-dataRoot = fullfile(pythonRoot, 'data');
+function specs = defaultSpecs(dataRoot, nxdnRoot)
 specs = [ ...
     makeSpec('DMR', -800e3, fullfile(dataRoot, ...
         'dmr_1_78125.rawiq'), 78125, 1.5, 1.5), ...

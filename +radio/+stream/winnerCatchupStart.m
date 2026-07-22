@@ -1,9 +1,7 @@
 function handle = winnerCatchupStart(buffer, epoch, protocol, varargin)
-%WINNERCATCHUPSTART Start synchronous or asynchronous winner backlog decode.
+%WINNERCATCHUPSTART Start asynchronous winner backlog decode.
 p = inputParser;
-p.addParameter('Mode', 'auto');
 p.addParameter('NumWorkers', 5);
-p.addParameter('PoolType', 'auto');
 p.addParameter('PreTriggerSec', radio.stream.defaultConfig().preTriggerSec);
 p.addParameter('Deduplicate', true);
 p.addParameter('InitialPdus', struct([]));
@@ -21,38 +19,14 @@ handle = struct( ...
     'canceled', false, ...
     'result', [], ...
     'errorReason', '', ...
-    'fallbackReason', '', ...
     'timerToken', tic, ...
     'elapsedSec', 0);
 
-mode = lower(char(p.Results.Mode));
-if strcmp(mode, 'serial')
-    handle.mode = 'serial';
-    handle.result = radio.stream.winnerCatchup(buffer, epoch, protocol, ...
-        'PreTriggerSec', p.Results.PreTriggerSec, ...
-        'Deduplicate', p.Results.Deduplicate, ...
-        'InitialPdus', p.Results.InitialPdus);
-    handle.completed = true;
-    handle.elapsedSec = toc(handle.timerToken);
-    return;
-end
-if ~any(strcmp(mode, {'auto', 'parallel'}))
-    error('radio:stream:winnerCatchupStart:Mode', ...
-        'Mode must be auto, parallel, or serial.');
-end
-
 [pool, info] = radio.stream.acquireParallelPool( ...
-    'NumWorkers', p.Results.NumWorkers, 'PoolType', p.Results.PoolType);
+    'NumWorkers', p.Results.NumWorkers);
 if isempty(pool)
-    handle.mode = 'serial_fallback';
-    handle.fallbackReason = info.reason;
-    handle.result = radio.stream.winnerCatchup(buffer, epoch, protocol, ...
-        'PreTriggerSec', p.Results.PreTriggerSec, ...
-        'Deduplicate', p.Results.Deduplicate, ...
-        'InitialPdus', p.Results.InitialPdus);
-    handle.completed = true;
-    handle.elapsedSec = toc(handle.timerToken);
-    return;
+    error('radio:stream:winnerCatchupStart:PoolUnavailable', ...
+        'Parallel pool is unavailable: %s', info.reason);
 end
 
 handle.mode = 'parallel';

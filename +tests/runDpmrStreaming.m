@@ -1,6 +1,6 @@
 function report = runDpmrStreaming()
 %RUNDPMRSTREAMING Validate causal dPMR state across arbitrary IQ chunks.
-path = fullfile(pybackend.defaultPythonRoot(), 'data', ...
+path = fullfile(common.sampleDataRoot(), ...
     'dpmr_1_48000.rawiq');
 if exist(path, 'file') ~= 2
     fprintf('[SKIP] dPMR streaming sample is not present.\n');

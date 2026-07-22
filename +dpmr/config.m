@@ -1,5 +1,5 @@
 function cfg = config()
-%CONFIG dPMR protocol defaults copied from Python DPMRConfig.
+%CONFIG dPMR protocol defaults.
 cfg = struct();
 cfg.targetSampleRateHz = 48000.0;
 cfg.symbolRateHz = 2400.0;

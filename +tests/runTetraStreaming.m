@@ -1,6 +1,6 @@
 function report = runTetraStreaming()
 %RUNTETRASTREAMING Validate causal TETRA DMO state across IQ chunks.
-path = fullfile(pybackend.defaultPythonRoot(), 'data', ...
+path = fullfile(common.sampleDataRoot(), ...
     'tetra_dmo_20240413_430050000_baseband.wav');
 if exist(path, 'file') ~= 2
     fprintf('[SKIP] TETRA streaming sample is not present.\n');

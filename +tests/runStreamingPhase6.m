@@ -113,7 +113,7 @@ samples = arrayfun(@(p) p.extra.stream.source_sample, pdus);
 end
 
 function testFiveRealProtocols()
-root = fullfile(pybackend.defaultPythonRoot(), 'data');
+root = common.sampleDataRoot();
 cases = { ...
     'DMR', fullfile(root, 'dmr_1_78125.rawiq'), 78125, 0.5, 1.5; ...
     ... % Native P25 waits for the full 180 ms LDU after a frame sync.

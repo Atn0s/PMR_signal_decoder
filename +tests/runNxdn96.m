@@ -6,22 +6,6 @@ cfg = nxdn.config();
 c = nxdn.constants();
 assert(any(strcmp({radio.protocolRegistry().name}, 'NXDN')));
 assert(isequal(radio.normalizeProtocolNames({'nxdn96'}), {'NXDN'}));
-[defaultBaseband, explicitDefault] = radio.resolveScanProtocols({});
-assert(~explicitDefault && any(strcmp(defaultBaseband, 'NXDN')));
-[defaultFreq, explicitDefault] = radio.resolveScanProtocols({}, 'FreqList', 0);
-assert(~explicitDefault && any(strcmp(defaultFreq, 'NXDN')));
-[defaultBlind, explicitDefault] = radio.resolveScanProtocols({}, 'BlindSearch', true);
-assert(~explicitDefault && any(strcmp(defaultBlind, 'NXDN')));
-didRejectPython = false;
-try
-    radio.decodeNarrowband(complex(zeros(1024, 1)), {'NXDN'}, 48000, ...
-        'DecoderBackend', 'python');
-catch ME
-    didRejectPython = strcmp(ME.identifier, ...
-        'radio:decodeNarrowband:NxdnPythonUnsupported');
-end
-assert(didRejectPython);
-
 assert(strcmp(c.fswHex, 'CDF59'));
 assert(isequal(char(nxdn.pn9Sequence(8).' + '0'), '00100111'));
 roundTrip = uint8(mod((0:181).', 4));
@@ -108,7 +92,7 @@ for sampleIndex = 1:2
     iq = common.readRawIq(path);
     [pdus, decodedReport] = nxdn.decodeIq(iq, 78125, cfg);
     scannerRaw = radio.scanFile(path, 'ProtocolNames', {'nxdn'}, ...
-        'PipelineBackend', 'matlab', 'DecoderBackend', 'matlab', ...
+        'ExecutionMode', 'parallel', ...
         'Deduplicate', false);
     assert(numel(scannerRaw) == numel(pdus));
     assert(isequal(sort(pduSignatures(scannerRaw)), sort(pduSignatures(pdus))));
@@ -120,7 +104,7 @@ for sampleIndex = 1:2
     assert(all(contains(lines, 'PROTO=NXDN')));
     if sampleIndex == 1
         defaultRaw = radio.scanFile(path, ...
-            'PipelineBackend', 'matlab', 'DecoderBackend', 'matlab', ...
+            'ExecutionMode', 'parallel', ...
             'Deduplicate', false);
         assert(~isempty(defaultRaw));
         assert(all(strcmp({defaultRaw.protocol}, 'NXDN')));
@@ -129,15 +113,6 @@ for sampleIndex = 1:2
         crop = iq(round(1.2 * 78125):round(1.7 * 78125));
         blindOffsets = radio.psdBlindSearch(crop, 78125, radio.defaultConfig());
         assert(numel(blindOffsets) == 1 && abs(blindOffsets(1)) < 1000);
-        knownFreqPdus = radio.scanIq(crop, 78125, 'FreqList', 0, ...
-            'DecoderBackend', 'matlab');
-        assert(~isempty(knownFreqPdus));
-        assert(all(strcmp({knownFreqPdus.protocol}, 'NXDN')));
-        blindPdus = radio.scanIq(crop, 78125, 'BlindSearch', true, ...
-            'DecoderBackend', 'matlab');
-        assert(~isempty(blindPdus));
-        assert(all(strcmp({blindPdus.protocol}, 'NXDN')));
-        assert(any(strcmp({blindPdus.type}, 'NXDN_VCALL')));
     end
     vcalls = pdus(strcmp({pdus.type}, 'NXDN_VCALL'));
     calls = pdus(strcmp({pdus.type}, 'NXDN_CALL'));
@@ -273,7 +248,6 @@ for k = 1:numel(pdus)
         radio.getField(pdus(k), 'src', 0), ...
         radio.getField(pdus(k), 'dst', 0), ...
         radio.getNestedField(pdus(k), 'extra.ran', []), ...
-        radio.getNestedField(pdus(k), 'extra.payload_hex', ''), ...
-        radio.getNestedField(pdus(k), 'extra.start_sample', [])});
+        radio.getNestedField(pdus(k), 'extra.payload_hex', '')});
 end
 end

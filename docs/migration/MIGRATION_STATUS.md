@@ -1,110 +1,46 @@
-# Migration Status
+# 迁移状态
 
-## Stage 1: MATLAB visualization with Python backend
+## 当前基线（2026-07-22）
 
-Implemented.
+项目已经收敛为原生 MATLAB 并行解码实现：
 
-- Python scanner compatibility backend remains available.
-- `pybackend.scanFile` and `tools/python_scan_json.py` return MATLAB structs through JSON.
-- `viz.analyzeFile` decodes and plots IQ, PSD, frontend output, and PDU text.
-- `+apps/RadioAnalyzer.m` provides a programmatic MATLAB UI.
+- 实时 UI 入口：`radio_parallel_frontend.m`；
+- 离线文件入口：`radio.scanFile`；
+- 支持 `parallel`、`tuned-parallel`、`wideband` 三种并行拓扑；
+- DMR、P25、dPMR、NXDN96、TETRA 均走 MATLAB 协议实现；
+- 并行池不可用时直接报错，不改变执行方式；
+- 外部样例只通过 `RADIO_SAMPLE_DATA_ROOT` 定位。
 
-## Stage 2: Common MATLAB DSP layer
+早期迁移用的 Python 解码桥、Python 命令行包装、串行调度器、串行降级分支，以及
+`radio_frontend.m`、`open_radio_analyzer.m`、`apps.RadioAnalyzer` 已删除。`golden/`
+中的 JSON 只作为历史回归数据保留，不再由运行时调用 Python 生成。
 
-Implemented for the offline path.
+## 已完成模块
 
-- `common.readRawIq`
-- `common.detectSampleRate`
-- `common.welchPsd`
-- `common.resampleTo`
-- `common.fskFrontend`
-- `radio.psdBlindSearch`
-- `radio.processCandidate`
-- `radio.processBaseband`
+- 公共 DSP：IQ 读取、采样率识别、重采样、PSD、4FSK 前端；
+- 协议包边界：DMR、P25、dPMR、NXDN96、TETRA 的配置、解码、后处理和格式化；
+- 流式识别：RF Epoch、并行 Probe、赢家追赶、持久锁定解码；
+- 已知载频：有状态融合 DDC 和多载频扫描；
+- 宽带发现：2× 过采样 WOLA/PFB、候选跟踪、精细 DDC；
+- 实时回放：共享 IQ 环、文件生产 Actor、频谱 Actor、DDC Actor 和 UI 无关会话状态；
+- 回归：协议样例、流式生命周期、并行调度、实时前端分层和多载频验收。
 
-## Stage 3: Protocol package boundary
+## 入口边界
 
-Implemented as native MATLAB decoders for the current DMR/P25/dPMR/NXDN metadata
-surface.
+`radio_parallel_frontend` 负责交互式 1× 文件回放。UI 只负责输入、选频和状态展示，
+处理生命周期位于 `radio.live.parallelSession*`。关闭 UI 会关闭对应会话；自动化可以用
+`Visible='off'` 隐藏窗口，但完全无 UI 的文件处理应调用 `radio.scanFile`。
 
-- `+dmr`, `+p25`, `+dpmr`, and `+nxdn` expose config, frontend, decode,
-  postprocess, dedup, and formatter functions.
-- NXDN96 supports explicit, centered/default, known-frequency and blind-search
-  native MATLAB dispatch. The Python compatibility backend does not support NXDN.
-- Current golden samples run with `PipelineBackend='matlab'` and `DecoderBackend='matlab'`.
-- Python fallback remains available for cross-checking and future protocol work.
+顶层 `scanner.m`、协议 CLI 和 `carrier_scope.m` 已删除。协议包内的调试函数、
+`viz.analyzeFile` 和 `examples/` 仅用于诊断与示例。
 
-## Stage 4: Docs, examples, and app wiring
+## 尚未纳入当前范围
 
-Implemented.
+- 生产级 SDR 数据源、硬件时间戳和设备溢出策略；
+- 61.44 MS/s 宽带链的实时加速；
+- C++ UI/数据源集成；
+- 更完整的 DMR FEC、CSBK 与链路控制覆盖；
+- 声码器音频输出。
 
-- `README.md`
-- `examples/runAnalyzeSample.m`
-- `examples/runGoldenRegression.m`
-- `docs/migration/MIGRATION_STATUS.md`
-
-## Stage 5: Golden vector regression
-
-Implemented as field-level regression.
-
-- `tools/build_golden_vectors.py`
-- `tools/buildGoldenVectors.m`
-- `+tests/goldenRegression.m`
-- `examples/runGoldenRegression.m`
-
-Use Python-generated JSON baselines under `golden/current/` to compare native
-MATLAB output against the current Python behavior. `golden/raw/` keeps optional
-no-dedup Python baselines for debugging duplicate frame recovery.
-
-## 2026-07-09 Incremental Sync
-
-Implemented from the Python `docs/MATLAB增量迁移方案.md` offline scope.
-
-- Added `Deduplicate` through `scanner.m`, protocol CLI scripts, `radio.scanFile`,
-  `radio.scanIq`, candidate/baseband decode paths, and the Python fallback bridge.
-- Aligned P25 and dPMR semantic dedup keys with Python behavior.
-- Added DMR and dPMR call summary PDUs: `DMR_CALL` and `dPMR_CALL`.
-- Aligned dPMR stable color filtering, including quality-aware filtering and
-  `stable_color_repeats`.
-- Added dPMR FS1 header decode path and Python-compatible global sync dedup.
-  The current golden dPMR sample has no valid FS1 header output, so this path is
-  implemented but still needs broader sample coverage.
-- Aligned MATLAB JSON output with Python default behavior by omitting `raw_bits`
-  unless `IncludeRawBits=true`.
-- Regenerated Python baselines and verified:
-  `tests.runAll` plus `tests.goldenRegression()` both pass.
-
-Still outside this migration slice:
-
-- Production SDR source, real-time-capable accelerated channelizer, admission/
-  backpressure scheduler, and hardware timestamp integration. A MATLAB
-  correctness implementation of 2x WOLA/PFB, candidate tracking, fine DDC and
-  per-candidate protocol race now exists under `+radio/+wideband`, but its
-  61.44 MS/s CPU path is not yet real time.
-- Full okdmr-equivalent DMR FEC/CSBK/link-control coverage.
-
-## 2026-07-15 Live Spectrum Selection Frontend
-
-Implemented as a file-replay correctness frontend.
-
-- Added `radio_frontend.m` with live Average/Max Hold spectrum, bounded
-  waterfall history, click-to-refine carrier selection, replay controls,
-  decoder state, Epoch/winner display, live PDU table, and JSON export.
-- Added pull-based `+radio/+replay` sources for single pass, synthetic
-  continuous replay, and independent-Epoch repetition on a monotonic sample
-  timeline.
-- Added reusable incremental `+radio/+scope` processing without retaining
-  wideband IQ history.
-- Added streaming known-carrier DDC-to-`RaceCoordinator` integration and a
-  100 ms baseband micro-batcher so short TDMA bursts retain the established
-  activity-detection semantics.
-- Added finite-source task draining: EOF waits for asynchronous protocol and
-  catch-up work, while explicit Stop cancels promptly.
-- Synthetic GUI/controller tests and real `DMR_signal/1.bvsp` tests pass in
-  DMR-serial and five-process race modes; both decode `LATE_ENTRY` and
-  `DMR_CALL`.
-
-This is still a single-selected-carrier, pull-based offline frontend. A real
-SDR source, bounded producer/consumer queue, hardware timestamps, overflow
-policy, and accelerated real-time 61.44 MS/s implementation remain future
-hardware-integration work.
+旧的设计和验证文档仍保留研发过程数据。凡其中提到已删除的 UI、Python 桥或串行
+调度，均属于历史阶段，不代表当前可用接口。

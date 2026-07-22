@@ -1,7 +1,7 @@
 # TETRA 全文件多窗口扫描
 
-本文描述当前 TETRA 全文件扫描入口。TETRA 已接入 `scanner.m` /
-`radio.scanFile` 的统一分发，但不走 DMR/P25/dPMR 的 48 kHz 窄带 4FSK
+本文描述当前 TETRA 全文件扫描入口。TETRA 已接入 `radio.scanFile`
+的统一分发，但不走 DMR/P25/dPMR 的 48 kHz 窄带 4FSK
 链路，而是走独立的 72 kHz windowed-IQ 分支。
 
 核心复用边界是：
@@ -32,7 +32,9 @@ result = tetra.scanFileWindows(file, ...
 统一 PDU 入口：
 
 ```matlab
-pdus = radio.scanFile(file, 'ProtocolNames', {'tetra'});
+pdus = radio.scanFile(file, ...
+    'ExecutionMode', 'parallel', ...
+    'ProtocolNames', {'tetra'});
 lines = radio.formatLines(pdus);
 ```
 

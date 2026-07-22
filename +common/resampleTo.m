@@ -1,5 +1,5 @@
 function [y, up, down] = resampleTo(x, sourceFs, targetFs)
-%RESAMPLETO Polyphase resample helper matching the Python ratio convention.
+%RESAMPLETO Polyphase rational resampling helper.
 up = round(targetFs);
 down = round(sourceFs);
 g = gcd(up, down);
@@ -17,4 +17,3 @@ if exist('resample', 'file') ~= 2
 end
 y = resample(x(:), up, down);
 end
-

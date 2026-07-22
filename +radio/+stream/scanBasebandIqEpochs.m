@@ -3,14 +3,8 @@ function [pdus, report] = scanBasebandIqEpochs(iq, sampleRateHz, varargin)
 p = inputParser;
 p.addParameter('ProtocolNames', {});
 p.addParameter('Config', radio.stream.defaultConfig());
-p.addParameter('RadioConfig', radio.defaultConfig());
-p.addParameter('Mode', 'parallel');
 p.addParameter('NumWorkers', 5);
-p.addParameter('PoolType', 'processes');
 p.addParameter('TimeoutSec', 120);
-p.addParameter('DecoderBackend', 'matlab');
-p.addParameter('PythonRoot', '');
-p.addParameter('PythonExecutable', '');
 p.addParameter('Deduplicate', true);
 p.addParameter('ShowProgress', false);
 p.addParameter('ChannelId', 1);
@@ -36,8 +30,6 @@ timerToken = tic;
 
 pdus = struct([]);
 races = cell(0, 1);
-fallbackReasons = cell(0, 1);
-executionModes = cell(0, 1);
 classificationElapsedSec = 0;
 decodeElapsedSec = 0;
 lastRace = [];
@@ -60,9 +52,7 @@ for k = 1:numel(epochs)
         epochIq, sampleRateHz, ...
         'ProtocolNames', p.Results.ProtocolNames, ...
         'Config', p.Results.Config, ...
-        'Mode', p.Results.Mode, ...
         'NumWorkers', p.Results.NumWorkers, ...
-        'PoolType', p.Results.PoolType, ...
         'TimeoutSec', p.Results.TimeoutSec, ...
         'ShowProgress', p.Results.ShowProgress, ...
         'TaskFcn', p.Results.ProbeTaskFcn, ...
@@ -78,15 +68,10 @@ for k = 1:numel(epochs)
         identification.classificationStartSample;
     epoch.classificationEndSample = identification.classificationEndSample;
     epoch.classificationElapsedSec = identification.classificationElapsedSec;
-    epoch.executionMode = identification.executionMode;
-    epoch.fallbackReason = identification.fallbackReason;
+    epoch.executionMode = 'parallel';
     epoch.classificationReport = identification;
     classificationElapsedSec = classificationElapsedSec + ...
         identification.classificationElapsedSec;
-    executionModes = appendNonempty(executionModes, ...
-        identification.executionMode);
-    fallbackReasons = appendNonempty(fallbackReasons, ...
-        identification.fallbackReason);
     for n = 1:numel(identification.races)
         races{end+1, 1} = identification.races{n}; %#ok<AGROW>
     end
@@ -139,9 +124,6 @@ selectedProtocol = '';
 if numel(detectedProtocols) == 1
     selectedProtocol = detectedProtocols{1};
 end
-executionMode = aggregateText(executionModes, 'mixed');
-fallbackReason = strjoin(uniqueStable(fallbackReasons), '; ');
-
 classificationStartSample = uint64(0);
 classificationEndSample = uint64(0);
 epochId = uint64(0);
@@ -157,10 +139,7 @@ report = struct( ...
     'selectedProtocol', selectedProtocol, ...
     'protocolsDetected', {detectedProtocols}, ...
     'protocolNames', {reshape({registry.name}, 1, [])}, ...
-    'requestedMode', char(p.Results.Mode), ...
-    'executionMode', executionMode, ...
-    'executionModes', {uniqueStable(executionModes)}, ...
-    'fallbackReason', fallbackReason, ...
+    'executionMode', 'parallel', ...
     'sampleRateHz', double(sampleRateHz), ...
     'sourceSampleStart', uint64(0), ...
     'sourceSampleCount', uint64(numel(iq)), ...
@@ -183,16 +162,33 @@ end
 
 function pdus = decodeEpoch(iq, sampleRateHz, protocol, options)
 if isempty(options.DecodeFcn)
-    pdus = radio.scanIq(iq, sampleRateHz, ...
-        'ProtocolNames', {protocol}, ...
-        'FreqList', [], ...
-        'BlindSearch', false, ...
-        'RadioConfig', options.RadioConfig, ...
-        'DecoderBackend', options.DecoderBackend, ...
-        'PythonRoot', options.PythonRoot, ...
-        'PythonExecutable', options.PythonExecutable, ...
-        'Deduplicate', options.Deduplicate, ...
-        'ShowProgress', options.ShowProgress);
+    protocol = radio.normalizeProtocolNames({protocol});
+    protocol = protocol{1};
+    specs = radio.protocolRegistry();
+    specIndex = find(strcmp({specs.name}, protocol), 1);
+    if isempty(specIndex)
+        error('radio:stream:scanBasebandIqEpochs:Protocol', ...
+            'No decoder is registered for protocol %s.', protocol);
+    end
+    spec = specs(specIndex);
+    if ~isempty(spec.scanIqFcn)
+        result = spec.scanIqFcn(iq, sampleRateHz, ...
+            'ShowProgress', options.ShowProgress, ...
+            'WriteOutputs', false);
+        if isstruct(result) && isfield(result, 'pdus')
+            pdus = result.pdus;
+        else
+            pdus = result;
+        end
+    else
+        snapshot = radio.stream.makeIqChunk( ...
+            iq, sampleRateHz, uint64(0));
+        pdus = radio.stream.decodeProtocolWindow(protocol, snapshot);
+    end
+    pdus = radio.postprocessPdus(pdus, {protocol});
+    if options.Deduplicate
+        pdus = radio.deduplicatePdus(pdus);
+    end
 else
     pdus = options.DecodeFcn(iq, sampleRateHz, protocol);
     pdus = radio.normalizePdus(pdus);
@@ -231,12 +227,6 @@ else
 end
 end
 
-function values = appendNonempty(values, value)
-if ~isempty(value)
-    values{end+1, 1} = char(value);
-end
-end
-
 function values = nonemptyValues(values)
 values = values(~cellfun(@isempty, values));
 end
@@ -245,17 +235,6 @@ function values = uniqueStable(values)
 if isempty(values), return; end
 [~, indices] = unique(values, 'stable');
 values = values(sort(indices));
-end
-
-function value = aggregateText(values, mixedValue)
-values = uniqueStable(values);
-if isempty(values)
-    value = '';
-elseif numel(values) == 1
-    value = values{1};
-else
-    value = mixedValue;
-end
 end
 
 function value = valueOr(value, fallback)

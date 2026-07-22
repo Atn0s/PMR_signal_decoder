@@ -14,8 +14,5 @@ message = struct( ...
     'frequencyOffsetsHz', double(frequencyOffsetsHz(:)), ...
     'inputCenterFrequencyHz', double(centerHz));
 send(actor.inputQueue, message);
-actor.retargetPending = true;
-actor.configured = false;
 actor.flushed = false;
-actor.flushRequested = false;
 end
