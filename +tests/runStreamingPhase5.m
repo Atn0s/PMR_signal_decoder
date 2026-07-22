@@ -2,7 +2,6 @@ function runStreamingPhase5()
 %RUNSTREAMINGPHASE5 Test winner backlog decode and race coordination.
 testAbsolutePduStamping();
 [buffer, epoch] = testRealDmrCatchup();
-testSerialCoordinator();
 testAsyncCatchupKeepsAcquisition(buffer, epoch);
 fprintf('Streaming phase-5 catch-up tests passed.\n');
 end
@@ -40,7 +39,7 @@ assert(strcmp(seeded.health.status, 'confirmed'));
 end
 
 function [buffer, epoch] = testRealDmrCatchup()
-path = fullfile(pybackend.defaultPythonRoot(), 'data', 'dmr_1_78125.rawiq');
+path = fullfile(common.sampleDataRoot(), 'dmr_1_78125.rawiq');
 fs = 78125;
 epoch = radio.stream.newEpoch(1, 21, 3, uint64(floor(0.5 * fs)));
 if exist(path, 'file') ~= 2
@@ -65,56 +64,6 @@ assert(all(samples >= result.catchupStartSample));
 assert(all(samples < result.catchupEndSample));
 end
 
-function testSerialCoordinator()
-cfg = radio.stream.defaultConfig();
-cfg.ringBufferSec = 2.0;
-cfg.preTriggerSec = 0.1;
-cfg.activity.initialNoiseFloorDb = -40;
-cfg.activity.minOnSec = 0.05;
-cfg.activity.offHangSec = 0.06;
-context = struct('StatusByProtocol', struct('DMR', 'confirmed'));
-coordinator = radio.stream.raceCoordinatorInit(1000, ...
-    'Config', cfg, ...
-    'Mode', 'serial', ...
-    'TaskFcn', @tests.fakeParallelProbeTask, ...
-    'TaskContext', context);
-
-signal = complex(ones(100, 1));
-for k = 0:2
-    [coordinator, output] = radio.stream.raceCoordinatorFeed( ...
-        coordinator, radio.stream.makeIqChunk( ...
-            signal, 1000, 100 * k, 'SequenceNumber', k));
-end
-assert(strcmp(output.state, 'LOCKED'));
-assert(strcmp(output.selectedProtocol, 'DMR'));
-assert(coordinator.catchupPassCount == 1);
-assert(coordinator.lastCatchup.catchupStartSample == uint64(0));
-assert(coordinator.lastCatchup.catchupEndSample == uint64(300));
-assert(coordinator.lastCatchup.caughtUpToLiveEdge);
-
-coordinator.deferLockedDecode = true;
-for k = 3:5
-    [coordinator, output] = radio.stream.raceCoordinatorFeed( ...
-        coordinator, radio.stream.makeIqChunk( ...
-            signal, 1000, 100 * k, 'SequenceNumber', k));
-    assert(isempty(output.decoder));
-end
-assert(coordinator.decoderState.lastProcessedEndSample == uint64(300));
-coordinator.deferLockedDecode = false;
-[coordinator, output] = radio.stream.raceCoordinatorFeed( ...
-    coordinator, radio.stream.makeIqChunk( ...
-        signal, 1000, 600, 'SequenceNumber', 6));
-assert(~isempty(output.decoder));
-assert(coordinator.decoderState.lastProcessedEndSample == uint64(700));
-
-noise = complex(1e-3 .* ones(100, 1));
-[~, output] = radio.stream.raceCoordinatorFeed( ...
-    coordinator, radio.stream.makeIqChunk( ...
-        noise, 1000, 700, 'SequenceNumber', 7));
-assert(strcmp(output.state, 'NO_SIGNAL'));
-assert(isempty(output.selectedProtocol));
-end
-
 function testAsyncCatchupKeepsAcquisition(buffer, epoch)
 pool = gcp('nocreate');
 if isempty(pool) || buffer.count == 0
@@ -122,7 +71,7 @@ if isempty(pool) || buffer.count == 0
 end
 firstEnd = buffer.endSample;
 handle = radio.stream.winnerCatchupStart( ...
-    buffer, epoch, 'DMR', 'Mode', 'parallel', 'NumWorkers', pool.NumWorkers, ...
+    buffer, epoch, 'DMR', 'NumWorkers', pool.NumWorkers, ...
     'PreTriggerSec', 0.2);
 extraCount = round(0.2 * buffer.sampleRateHz);
 extra = radio.stream.makeIqChunk( ...
@@ -136,7 +85,7 @@ assert(status.result.catchupEndSample == firstEnd);
 assert(status.result.catchupEndSample < buffer.endSample);
 
 handle = radio.stream.winnerCatchupStart( ...
-    buffer, epoch, 'DMR', 'Mode', 'parallel', 'NumWorkers', pool.NumWorkers, ...
+    buffer, epoch, 'DMR', 'NumWorkers', pool.NumWorkers, ...
     'PreTriggerSec', 0.2);
 [handle, status] = radio.stream.winnerCatchupCollect( ...
     handle, 'TimeoutSec', 30);

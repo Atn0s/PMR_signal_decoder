@@ -1,5 +1,8 @@
 # 已知载频 DDC 过渡模块实现记录
 
+> 历史实现记录：文中的 `scanner.m` 示例已删除。当前通过
+> `radio.scanFile(..., 'ExecutionMode', 'tuned-parallel')` 调用该 DDC 链。
+
 ## 1. 目标与边界
 
 本模块把“宽带复数 IQ 中已经给出大致载频的位置”转换为现有五制式并行识别器能够

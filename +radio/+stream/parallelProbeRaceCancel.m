@@ -34,7 +34,6 @@ handle.race.elapsedSec = handle.elapsedSec;
 handle.race.staleResultCount = handle.staleResultCount;
 handle.race.taskErrorCount = handle.taskErrorCount;
 handle.race.canceled = true;
-handle.race.fallbackReason = handle.fallbackReason;
 handle.race.maxInFlight = handle.maxInFlight;
 handle.race.peakInFlight = handle.peakInFlight;
 handle.race.earlyTerminated = handle.earlyTerminated;

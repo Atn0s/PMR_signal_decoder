@@ -146,10 +146,6 @@ budget = inf;
 if scanner.channelCount <= 1
     return;
 end
-mode = lower(char(scanner.channels{1}.coordinator.options.mode));
-if ~any(strcmp(mode, {'auto', 'parallel'}))
-    return;
-end
 budget = max(1, floor(scanner.maxProbeRaceStartsPerFeed));
 first = min(scanner.channelCount, max(1, ...
     double(scanner.nextProbeStartChannel)));

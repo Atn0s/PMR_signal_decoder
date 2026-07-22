@@ -70,6 +70,15 @@ while remaining > 0
         radio.tuned.decoderMetricFromCoordinatorOutput(coordinatorOutput));
     remaining = remaining - count;
 end
+if p.Results.WaitForTasks
+    [scanner, tailWaitSec, tailTimedOut, metrics] = awaitActiveTasks( ...
+        scanner, p.Results.TaskTimeoutSec, p.Results.PollIntervalSec);
+    decoderMetrics = appendStruct(decoderMetrics, metrics);
+    scanner.finalizeTaskWaitElapsedSec = ...
+        scanner.finalizeTaskWaitElapsedSec + tailWaitSec;
+    scanner.finalizeTaskWaitTimedOut = ...
+        scanner.finalizeTaskWaitTimedOut || tailTimedOut;
+end
 scanner.finalized = true;
 report = buildReport(scanner, decoderMetrics);
 end

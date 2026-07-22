@@ -19,14 +19,10 @@ DCC、STCH、SCH/F 尝试解码，以及当前 TCH/VOICE 边界。
 统一输出入口：
 
 ```matlab
-pdus = radio.scanFile(file, 'ProtocolNames', {'tetra'});
+pdus = radio.scanFile(file, ...
+    'ExecutionMode', 'parallel', ...
+    'ProtocolNames', {'tetra'});
 lines = radio.formatLines(pdus);
-```
-
-或者运行：
-
-```matlab
-run('tetra_cli.m')
 ```
 
 TETRA 单模式全文件多窗口实验入口：

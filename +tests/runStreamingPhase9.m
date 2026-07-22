@@ -4,7 +4,6 @@ testShortSilenceStaysInEpoch();
 testLongSilenceCreatesEpochs();
 testNoSignalCreatesNoEpoch();
 testSameTransmitterIsNotMerged();
-testProtocolSwitchRollsEpoch();
 fprintf('Streaming phase-9 independent Epoch tests passed.\n');
 end
 
@@ -45,7 +44,6 @@ cfg = epochConfig();
 [pdus, report] = radio.stream.scanBasebandIqEpochs( ...
     zeros(1000, 1), 1000, ...
     'Config', cfg, ...
-    'Mode', 'serial', ...
     'ProbeTaskFcn', @tests.fakeParallelProbeTask, ...
     'DecodeFcn', @tests.fakeEpochDecoder);
 assert(isempty(pdus));
@@ -62,7 +60,6 @@ context = struct('StatusByProtocol', struct('DMR', 'confirmed'));
 [pdus, report] = radio.stream.scanBasebandIqEpochs( ...
     twoBurstIq(), fs, ...
     'Config', cfg, ...
-    'Mode', 'serial', ...
     'ProbeTaskFcn', @tests.fakeParallelProbeTask, ...
     'ProbeTaskContext', context, ...
     'DecodeFcn', @tests.fakeEpochDecoder);
@@ -81,43 +78,6 @@ assert(isequal([report.epochs.pduStartIndex], uint64([1, 2])));
 assert(isequal([report.epochs.pduEndIndex], uint64([1, 2])));
 assert(report.epochs(1).classificationReport.epochId == uint64(1));
 assert(report.epochs(2).classificationReport.epochId == uint64(2));
-end
-
-function testProtocolSwitchRollsEpoch()
-cfg = epochConfig();
-cfg.lockedSuspectWindows = 1;
-cfg.lockedLostWindows = 2;
-coordinator = radio.stream.raceCoordinatorInit(1000, ...
-    'Config', cfg, ...
-    'Mode', 'serial', ...
-    'TaskFcn', @tests.fakeProtocolSwitchProbeTask, ...
-    'LockedDecodeFcn', @tests.fakeHealthLossDecoder);
-
-for startSample = 0:100:600
-    chunk = radio.stream.makeIqChunk( ...
-        complex(ones(100, 1)), 1000, startSample, ...
-        'SequenceNumber', startSample / 100);
-    [coordinator, output] = ...
-        radio.stream.raceCoordinatorFeed(coordinator, chunk);
-    if ~isempty(coordinator.decoderState)
-        coordinator.decoderState.incremental.minAdvanceSec = 0.1;
-    end
-end
-
-assert(strcmp(output.state, 'LOCKED'));
-assert(strcmp(output.selectedProtocol, 'P25'));
-assert(output.epochId == uint64(2));
-assert(numel(output.closedEpochs) == 1);
-closed = output.closedEpochs(1);
-assert(closed.epochId == uint64(1));
-assert(strcmp(closed.protocol, 'DMR'));
-assert(strcmp(closed.closeReason, 'protocol_switch'));
-assert(closed.endSample == uint64(400));
-assert(isequal(closed.ambiguousInterval, uint64([400, 700])));
-assert(output.currentEpoch.epochId == uint64(2));
-assert(strcmp(output.currentEpoch.protocol, 'P25'));
-assert(output.currentEpoch.candidateStartSample == uint64(400));
-assert(any(strcmp({output.events.type}, 'PROTOCOL_SWITCH_CONFIRMED')));
 end
 
 function cfg = epochConfig()

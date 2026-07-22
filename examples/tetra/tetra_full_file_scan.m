@@ -5,7 +5,8 @@ projectRoot = fileparts(fileparts(fileparts(mfilename('fullpath'))));
 addpath(projectRoot);
 startup;
 
-TARGET_FILE = '/home/lzkj/lzkj_workspace/python_docs/DMR_demo/data/tetra_dmo_20240413_430050000_baseband.wav';
+TARGET_FILE = fullfile(common.sampleDataRoot(), ...
+    'tetra_dmo_20240413_430050000_baseband.wav');
 OUTPUT_DIR = fullfile(projectRoot, 'outputs', 'tetra_full_file_scan', 'interactive_latest');
 
 result = tetra.scanFileWindows(TARGET_FILE, ...

@@ -1,5 +1,5 @@
 function cfg = config()
-%CONFIG DMR protocol defaults copied from the Python DMRConfig.
+%CONFIG DMR protocol defaults.
 cfg = struct();
 cfg.targetSampleRateHz = 48000.0;
 cfg.symbolRateHz = 4800.0;

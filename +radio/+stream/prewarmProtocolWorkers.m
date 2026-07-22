@@ -2,7 +2,6 @@ function report = prewarmProtocolWorkers(protocolNames, varargin)
 %PREWARMPROTOCOLWORKERS Warm every protocol on every process worker.
 p = inputParser;
 p.addParameter('NumWorkers', 5);
-p.addParameter('PoolType', 'processes');
 p.addParameter('Pool', []);
 p.addParameter('DurationSec', 0.20);
 p.addParameter('TimeoutSec', 120);
@@ -19,8 +18,7 @@ pool = p.Results.Pool;
 poolInfo = struct('available', ~isempty(pool), 'reason', 'provided_pool');
 if isempty(pool)
     [pool, poolInfo] = radio.stream.acquireParallelPool( ...
-        'NumWorkers', p.Results.NumWorkers, ...
-        'PoolType', p.Results.PoolType);
+        'NumWorkers', p.Results.NumWorkers);
 end
 report = struct( ...
     'success', false, ...

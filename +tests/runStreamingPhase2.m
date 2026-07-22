@@ -1,5 +1,5 @@
 function runStreamingPhase2()
-%RUNSTREAMINGPHASE2 Tests for probe confirmation and serial race semantics.
+%RUNSTREAMINGPHASE2 Tests for probe confirmation and race semantics.
 testStrongEvidenceRules();
 testAmbiguousAndStaleResults();
 testProgressivePendingRace();
@@ -61,8 +61,10 @@ end
 
 function testProgressivePendingRace()
 snapshot = radio.stream.makeIqChunk(complex(zeros(50, 1)), 1000, 0);
-[states, race] = radio.stream.serialProbeRace(snapshot, [], ...
+handle = radio.stream.parallelProbeRaceStart(snapshot, [], ...
     'EpochId', 8, 'Generation', 3);
+states = handle.states;
+race = handle.race;
 assert(numel(states) == 5);
 assert(strcmp(race.outcome, 'classifying'));
 assert(all(strcmp({race.results.status}, 'pending')));
@@ -78,7 +80,7 @@ assert(strcmp(rejected.status, 'rejected'));
 end
 
 function testRealProtocolProbes()
-root = fullfile(pybackend.defaultPythonRoot(), 'data');
+root = common.sampleDataRoot();
 cases = { ...
     'DMR', fullfile(root, 'dmr_1_78125.rawiq'), 78125, 0.5, 1.5; ...
     'P25', fullfile(root, 'p25_1_78125.rawiq'), 78125, 0.0, 1.0; ...

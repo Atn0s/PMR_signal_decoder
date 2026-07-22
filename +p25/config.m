@@ -1,5 +1,5 @@
 function cfg = config()
-%CONFIG P25 Phase 1 protocol defaults copied from Python P25Config.
+%CONFIG P25 Phase 1 protocol defaults.
 cfg = struct();
 cfg.targetSampleRateHz = 48000.0;
 cfg.symbolRateHz = 4800.0;

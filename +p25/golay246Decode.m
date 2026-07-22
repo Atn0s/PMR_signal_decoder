@@ -41,7 +41,7 @@ if mod(bitCount(codeword), 2) == 1
 end
 parity = zeros(1, 12);
 for idx = 1:12
-    bitPos = idx + 11; % Python range(12,24), emitted MSB-first over that slice.
+    bitPos = idx + 11; % Positions 12:23, emitted MSB-first over that slice.
     parity(idx) = bitget(codeword, bitPos + 1);
 end
 end
@@ -62,4 +62,3 @@ while x ~= 0
     x = bitshift(x, -1);
 end
 end
-

@@ -1,12 +1,12 @@
 function report = goldenRegression(varargin)
-%GOLDENREGRESSION Compare MATLAB native output against Python JSON baselines.
+%GOLDENREGRESSION Compare native output against stored reference JSON.
 p = inputParser;
 p.addParameter('GoldenDir', fullfile(projectRoot(), 'golden', 'current'));
-p.addParameter('PythonRoot', pybackend.defaultPythonRoot());
+p.addParameter('SampleRoot', common.sampleDataRoot());
 p.addParameter('StopOnMismatch', false);
 p.parse(varargin{:});
 
-specs = sampleSpecs(p.Results.PythonRoot);
+specs = sampleSpecs(p.Results.SampleRoot);
 items = repmat(emptyItem(), 0, 1);
 for k = 1:numel(specs)
     spec = specs(k);
@@ -15,7 +15,7 @@ for k = 1:numel(specs)
         items(end+1, 1) = skippedItem(spec.name, 'missing golden JSON'); %#ok<AGROW>
         continue;
     end
-    samplePath = fullfile(p.Results.PythonRoot, spec.relPath);
+    samplePath = fullfile(p.Results.SampleRoot, spec.relPath);
     if exist(samplePath, 'file') ~= 2
         items(end+1, 1) = skippedItem(spec.name, 'missing sample file'); %#ok<AGROW>
         continue;
@@ -24,10 +24,8 @@ for k = 1:numel(specs)
     expected = readJsonPdus(goldenPath);
     actual = radio.scanFile(samplePath, ...
         'ProtocolNames', spec.protocols, ...
-        'BlindSearch', spec.blindSearch, ...
         'SampleRate', spec.sampleRate, ...
-        'PipelineBackend', 'matlab', ...
-        'DecoderBackend', 'matlab');
+        'ExecutionMode', spec.executionMode);
     items(end+1, 1) = compareOne(spec.name, expected, actual); %#ok<AGROW>
 end
 
@@ -181,12 +179,17 @@ specs = repmat(struct( ...
     'relPath', '', ...
     'protocols', {{}}, ...
     'sampleRate', [], ...
-    'blindSearch', false), 0, 1);
-specs(end+1) = makeSpec('dmr_1_78125', 'data/dmr_1_78125.rawiq', {'dmr'}, [], false);
-specs(end+1) = makeSpec('dmr_2_78125', 'data/dmr_2_78125.rawiq', {'dmr'}, [], false);
-specs(end+1) = makeSpec('p25_1_78125', 'data/p25_1_78125.rawiq', {'p25'}, [], false);
-specs(end+1) = makeSpec('dpmr_1_48000', 'data/dpmr_1_48000.rawiq', {'dpmr'}, [], false);
-specs(end+1) = makeSpec('wideband_2_5mhz', 'data/synthesized_wideband_2.5MHz.rawiq', {'dmr'}, [], true);
+    'executionMode', 'parallel'), 0, 1);
+specs(end+1) = makeSpec('dmr_1_78125', 'dmr_1_78125.rawiq', ...
+    {'dmr'}, [], 'parallel');
+specs(end+1) = makeSpec('dmr_2_78125', 'dmr_2_78125.rawiq', ...
+    {'dmr'}, [], 'parallel');
+specs(end+1) = makeSpec('p25_1_78125', 'p25_1_78125.rawiq', ...
+    {'p25'}, [], 'parallel');
+specs(end+1) = makeSpec('dpmr_1_48000', 'dpmr_1_48000.rawiq', ...
+    {'dpmr'}, [], 'parallel');
+specs(end+1) = makeSpec('wideband_2_5mhz', ...
+    'synthesized_wideband_2.5MHz.rawiq', {'dmr'}, [], 'wideband');
 for k = 1:numel(specs)
     if exist(fullfile(root, specs(k).relPath), 'file') ~= 2
         specs(k).sampleRate = [];
@@ -194,9 +197,9 @@ for k = 1:numel(specs)
 end
 end
 
-function spec = makeSpec(name, relPath, protocols, sampleRate, blindSearch)
+function spec = makeSpec(name, relPath, protocols, sampleRate, executionMode)
 spec = struct('name', name, 'relPath', relPath, 'protocols', {protocols}, ...
-    'sampleRate', sampleRate, 'blindSearch', blindSearch);
+    'sampleRate', sampleRate, 'executionMode', executionMode);
 end
 
 function item = emptyItem()

@@ -1,5 +1,5 @@
 function [actor, events] = fileProducerPoll(actor, varargin)
-%FILEPRODUCERPOLL Collect ready, IQ, terminal, and error events.
+%FILEPRODUCERPOLL Collect producer state and lifecycle events.
 p = inputParser;
 p.addParameter('MaxEvents', inf);
 p.parse(varargin{:});
@@ -20,15 +20,11 @@ while actor.outputQueue.QueueLength > 0 && ...
                 send(actor.inputQueue, actor.pendingCommands{k});
             end
             actor.pendingCommands = cell(0, 1);
-        case {'chunk', 'progress'}
-            actor.globalNextSample = uint64(message.sourceSampleEnd);
-            actor.completedLoops = uint64(message.completedLoops);
+        case 'progress'
             actor.productionLagSec = double(message.productionLagSec);
-            actor.maxProductionLagSec = max( ...
-                actor.maxProductionLagSec, double(message.productionLagSec));
-            actor = updateDirectMetrics(actor, message);
-            actor = updateRingMetrics(actor, message);
-            if strcmp(message.type, 'progress') && ~isempty(events) && ...
+            actor.spectrumDroppedChunks = ...
+                uint64(message.spectrumDroppedChunks);
+            if ~isempty(events) && ...
                     strcmp(radio.getField(events{end}, 'type', ''), 'progress')
                 events{end} = message;
             else
@@ -36,11 +32,9 @@ while actor.outputQueue.QueueLength > 0 && ...
             end
         case 'terminal'
             actor.terminal = true;
-            actor.globalNextSample = uint64(message.sourceSampleEnd);
-            actor.completedLoops = uint64(message.completedLoops);
             actor.productionLagSec = 0;
-            actor = updateDirectMetrics(actor, message);
-            actor = updateRingMetrics(actor, message);
+            actor.spectrumDroppedChunks = ...
+                uint64(message.spectrumDroppedChunks);
             events{end+1, 1} = message; %#ok<AGROW>
         case 'stopped'
             actor.stopped = true;
@@ -56,24 +50,7 @@ if ~actor.stopped && ~actor.terminal && ~actor.failed && ...
     actor.failed = true;
     actor.errorReason = futureError(actor.future);
     events{end+1, 1} = struct('type', 'error', ...
-        'actorId', actor.actorId, 'errorReason', actor.errorReason); %#ok<AGROW>
-end
-end
-
-function actor = updateRingMetrics(actor, message)
-if isfield(message, 'ringWriteSequence')
-    actor.ringWriteSequence = uint64(message.ringWriteSequence);
-end
-end
-
-function actor = updateDirectMetrics(actor, message)
-if isfield(message, 'maxProductionLagSec')
-    actor.maxProductionLagSec = max(actor.maxProductionLagSec, ...
-        double(message.maxProductionLagSec));
-end
-if isfield(message, 'spectrumDroppedChunks')
-    actor.spectrumDroppedChunks = ...
-        uint64(message.spectrumDroppedChunks);
+        'actorId', actor.actorId, 'errorReason', actor.errorReason);
 end
 end
 

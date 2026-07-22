@@ -5,10 +5,7 @@ p.addParameter('EpochId', uint64(1));
 p.addParameter('Generation', uint64(1));
 p.addParameter('ProtocolNames', {});
 p.addParameter('Registry', []);
-p.addParameter('Mode', 'auto');
 p.addParameter('NumWorkers', 5);
-p.addParameter('PoolType', 'auto');
-p.addParameter('AllowSerialFallback', true);
 p.addParameter('TaskFcn', []);
 p.addParameter('TaskContext', struct());
 p.addParameter('MaxInFlight', []);
@@ -46,29 +43,12 @@ if ~any(candidateMask)
         'CandidateMask must retain at least one protocol.');
 end
 handle.candidateMask = candidateMask;
-mode = lower(char(p.Results.Mode));
-if strcmp(mode, 'serial')
-    handle = runSerial(handle, p.Results.TaskFcn, p.Results.TaskContext);
-    return;
-end
-if ~any(strcmp(mode, {'auto', 'parallel'}))
-    error('radio:stream:parallelProbeRaceStart:Mode', ...
-        'Mode must be auto, parallel, or serial.');
-end
 
 [pool, poolInfo] = radio.stream.acquireParallelPool( ...
     'NumWorkers', p.Results.NumWorkers, ...
-    'PoolType', p.Results.PoolType, ...
     'AllowCreate', true);
 handle.poolInfo = poolInfo;
 if isempty(pool)
-    if p.Results.AllowSerialFallback
-        handle.fallbackReason = poolInfo.reason;
-        handle = runSerial(handle, p.Results.TaskFcn, p.Results.TaskContext);
-        handle.executionMode = 'serial_fallback';
-        handle.race.executionMode = 'serial_fallback';
-        return;
-    end
     error('radio:stream:parallelProbeRaceStart:PoolUnavailable', ...
         'Parallel pool is unavailable: %s', poolInfo.reason);
 end
@@ -149,8 +129,7 @@ handle = struct( ...
     'collected', false(numel(registry), 1), ...
     'completed', false, ...
     'canceled', false, ...
-    'executionMode', '', ...
-    'fallbackReason', '', ...
+    'executionMode', 'parallel', ...
     'pool', [], ...
     'taskFcn', options.TaskFcn, ...
     'taskContext', options.TaskContext, ...
@@ -168,39 +147,6 @@ handle = struct( ...
     'timerToken', tic, ...
     'elapsedSec', 0, ...
     'race', []);
-end
-
-function handle = runSerial(handle, taskFcn, taskContext)
-handle.executionMode = 'serial';
-for k = 1:numel(handle.registry)
-    if ~handle.candidateMask(k)
-        handle.results(k) = radio.stream.makeProbeResult( ...
-            handle.states(k), 'rejected', handle.snapshot, ...
-            'Reason', 'modulation_family_gate_excluded');
-        handle.collected(k) = true;
-        continue;
-    end
-    [ready, reason] = radio.stream.probeReady( ...
-        handle.states(k), handle.snapshot, handle.registry(k));
-    if ~ready
-        handle.results(k) = localResult( ...
-            handle.states(k), handle.snapshot, reason);
-    else
-        try
-            [newState, result] = radio.stream.executeProbeTask( ...
-                handle.states(k), handle.snapshot, handle.registry(k), ...
-                taskFcn, taskContext);
-            [handle, accepted] = acceptResult(handle, k, newState, result);
-            if ~accepted, handle.staleResultCount = handle.staleResultCount + 1; end
-        catch ME
-            handle.taskErrorCount = handle.taskErrorCount + 1;
-            handle.results(k) = taskErrorResult( ...
-                handle.states(k), handle.snapshot, ME);
-        end
-    end
-    handle.collected(k) = true;
-end
-handle = finalizeHandle(handle);
 end
 
 function result = localResult(state, snapshot, reason)
@@ -223,7 +169,6 @@ handle.race.elapsedSec = handle.elapsedSec;
 handle.race.staleResultCount = handle.staleResultCount;
 handle.race.taskErrorCount = handle.taskErrorCount;
 handle.race.canceled = handle.canceled;
-handle.race.fallbackReason = handle.fallbackReason;
 handle.race.maxInFlight = handle.maxInFlight;
 handle.race.peakInFlight = handle.peakInFlight;
 handle.race.earlyTerminated = handle.earlyTerminated;

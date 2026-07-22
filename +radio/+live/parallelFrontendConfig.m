@@ -1,0 +1,69 @@
+function options = parallelFrontendConfig(varargin)
+%PARALLELFRONTENDCONFIG Parse the parallel frontend's public options.
+p = inputParser;
+p.addParameter('DefaultFile', '');
+p.addParameter('Visible', 'on');
+p.addParameter('SampleRate', []);
+p.addParameter('CenterFrequencyHz', []);
+p.addParameter('IqDType', 'int16');
+p.addParameter('ReplayMode', 'continuous-test');
+p.addParameter('MaxLoops', inf);
+p.addParameter('EpochSilenceSec', 0.4);
+p.addParameter('ProtocolNames', {});
+p.addParameter('NumWorkers', 5);
+p.addParameter('MaxCarrierPaths', 5);
+p.addParameter('SpectrumConfig', radio.scope.defaultConfig());
+p.addParameter('TunedConfig', radio.tuned.defaultConfig());
+p.addParameter('StreamConfig', radio.stream.defaultConfig());
+p.addParameter('RuntimeConfig', struct());
+p.addParameter('TestHooks', struct());
+p.addParameter('Deduplicate', false);
+p.addParameter('PrintToCommandWindow', true);
+p.addParameter('AutoStartPreview', false);
+p.parse(varargin{:});
+options = p.Results;
+
+options.RuntimeConfig = mergeKnownFields( ...
+    radio.live.parallelSessionDefaultConfig(), ...
+    options.RuntimeConfig, 'RuntimeConfig');
+options.TestHooks = mergeKnownFields(struct( ...
+    'taskFcn', [], 'taskContext', struct(), 'lockedDecodeFcn', []), ...
+    options.TestHooks, 'TestHooks');
+validateattributes(options.NumWorkers, {'numeric'}, ...
+    {'scalar','real','finite','integer','positive'});
+validateattributes(options.MaxCarrierPaths, {'numeric'}, ...
+    {'scalar','real','finite','integer','positive'});
+
+options.SessionConfig = struct( ...
+    'iqDType', options.IqDType, ...
+    'replayMode', options.ReplayMode, ...
+    'maxLoops', options.MaxLoops, ...
+    'epochSilenceSec', options.EpochSilenceSec, ...
+    'protocolNames', {options.ProtocolNames}, ...
+    'numWorkers', double(options.NumWorkers), ...
+    'maxCarrierPaths', double(options.MaxCarrierPaths), ...
+    'spectrumConfig', options.SpectrumConfig, ...
+    'tunedConfig', options.TunedConfig, ...
+    'streamConfig', options.StreamConfig, ...
+    'runtime', options.RuntimeConfig, ...
+    'testHooks', options.TestHooks, ...
+    'deduplicate', logical(options.Deduplicate));
+end
+
+function out = mergeKnownFields(defaults, overrides, name)
+if isempty(overrides), out = defaults; return; end
+if ~isstruct(overrides) || ~isscalar(overrides)
+    error('radio_parallel_frontend:Config', ...
+        '%s must be a scalar struct.', name);
+end
+unknown = setdiff(fieldnames(overrides), fieldnames(defaults));
+if ~isempty(unknown)
+    error('radio_parallel_frontend:ConfigField', ...
+        'Unknown %s field: %s', name, unknown{1});
+end
+out = defaults;
+fields = fieldnames(overrides);
+for fieldIndex = 1:numel(fields)
+    out.(fields{fieldIndex}) = overrides.(fields{fieldIndex});
+end
+end

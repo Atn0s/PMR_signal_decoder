@@ -9,15 +9,9 @@ p.addParameter('IqDType', 'int16');
 p.addParameter('HeaderBytes', []);
 p.addParameter('Config', radio.tuned.defaultConfig());
 p.addParameter('StreamConfig', radio.stream.defaultConfig());
-p.addParameter('RadioConfig', radio.defaultConfig());
 p.addParameter('ProtocolNames', {});
-p.addParameter('Mode', 'parallel');
 p.addParameter('NumWorkers', 5);
-p.addParameter('PoolType', 'processes');
 p.addParameter('TimeoutSec', 120);
-p.addParameter('DecoderBackend', 'matlab');
-p.addParameter('PythonRoot', '');
-p.addParameter('PythonExecutable', '');
 p.addParameter('Deduplicate', true);
 p.addParameter('ShowProgress', false);
 p.addParameter('ChannelId', 1);
@@ -58,14 +52,8 @@ end
     basebandIq, extraction.outputSampleRateHz, ...
     'ProtocolNames', p.Results.ProtocolNames, ...
     'Config', p.Results.StreamConfig, ...
-    'RadioConfig', p.Results.RadioConfig, ...
-    'Mode', p.Results.Mode, ...
     'NumWorkers', p.Results.NumWorkers, ...
-    'PoolType', p.Results.PoolType, ...
     'TimeoutSec', p.Results.TimeoutSec, ...
-    'DecoderBackend', p.Results.DecoderBackend, ...
-    'PythonRoot', p.Results.PythonRoot, ...
-    'PythonExecutable', p.Results.PythonExecutable, ...
     'Deduplicate', p.Results.Deduplicate, ...
     'ShowProgress', p.Results.ShowProgress, ...
     'ChannelId', p.Results.ChannelId, ...
@@ -73,8 +61,7 @@ end
 pdus = addTunedMetadata(pdus, extraction);
 
 report = basebandReport;
-report.executionMode = ['tuned-', valueOr( ...
-    basebandReport.executionMode, char(p.Results.Mode))];
+report.executionMode = 'tuned-parallel';
 report.path = char(path);
 report.inputSampleRateHz = extraction.inputSampleRateHz;
 report.basebandSampleRateHz = extraction.outputSampleRateHz;
@@ -106,8 +93,4 @@ for k = 1:numel(pdus)
         'decimation_factor', extraction.decimationFactor);
 end
 pdus = radio.normalizePdus(pdus);
-end
-
-function value = valueOr(value, fallback)
-if isempty(value), value = fallback; end
 end

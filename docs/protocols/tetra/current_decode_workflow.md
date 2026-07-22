@@ -33,14 +33,10 @@ result = tetra.symbolDebug(file, ...)
 统一 PDU 输出入口：
 
 ```matlab
-pdus = radio.scanFile(file, 'ProtocolNames', {'tetra'});
+pdus = radio.scanFile(file, ...
+    'ExecutionMode', 'parallel', ...
+    'ProtocolNames', {'tetra'});
 lines = radio.formatLines(pdus);
-```
-
-或直接运行：
-
-```matlab
-run('tetra_cli.m')
 ```
 
 `tetra.symbolDebug` 主要用于看图和物理层调试；`radio.scanFile(..., {'tetra'})`
@@ -60,13 +56,11 @@ run('examples/tetra/tetra_full_file_scan.m')
 统一入口的当前调度规则：
 
 ```text
-DMR/P25/dPMR/NXDN -> 48 kHz narrowband 4FSK 分支
-TETRA        -> 72 kHz windowed-IQ 分支
+parallel       -> 已居中基带的并行协议竞速
+tuned-parallel -> 用一个 FreqList 频偏提取载频后并行竞速
+wideband       -> WOLA/PFB 自动发现后并行竞速
 
-BlindSearch=true 且未指定协议      -> 默认扫描 DMR/P25/dPMR/NXDN
-FreqList 非空且未指定协议          -> DMR/P25/dPMR/NXDN + TETRA 都尝试
-显式指定 TETRA + BlindSearch=true + 无 FreqList
-                                  -> 报错，宽带 TETRA 盲扫暂未实现
+TETRA 获胜后 -> 72 kHz windowed-IQ 解码
 ```
 
 MATLAB 的 `+tetra`、`+common` 目录是 package 目录。例如：
@@ -99,7 +93,8 @@ tetra.symbolDebug(...)
 默认 DMO 样本：
 
 ```text
-/home/lzkj/lzkj_workspace/python_docs/DMR_demo/data/tetra_dmo_20240413_430050000_baseband.wav
+fullfile(common.sampleDataRoot(), ...
+    'tetra_dmo_20240413_430050000_baseband.wav')
 ```
 
 当前 2.5 秒窗口运行结果：

@@ -20,13 +20,8 @@ while actor.outputQueue.QueueLength > 0 && ...
                 send(actor.inputQueue, actor.pendingMessages{k});
             end
             actor.pendingMessages = cell(0, 1);
-        case 'retargeted'
-            actor.retargetPending = false;
-            actor.configured = true;
-            events{end+1, 1} = message; %#ok<AGROW>
         case 'reset'
             actor.resetPending = false;
-            actor.configured = false;
             actor.ringAttached = false;
             actor.ringDrained = false;
             actor.pendingInputSamples = uint64(0);
@@ -73,11 +68,9 @@ while actor.outputQueue.QueueLength > 0 && ...
             events{end+1, 1} = message; %#ok<AGROW>
         case 'flushed'
             actor.flushed = true;
-            if isfield(message, 'ringDrained') && message.ringDrained
-                actor.ringDrained = true;
-                actor.ringAttached = false;
-                actor.pendingInputSamples = uint64(0);
-            end
+            actor.ringDrained = true;
+            actor.ringAttached = false;
+            actor.pendingInputSamples = uint64(0);
             events{end+1, 1} = message; %#ok<AGROW>
         case 'stopped'
             actor.stopped = true;
@@ -94,7 +87,7 @@ if ~actor.stopped && ~actor.failed && ...
     actor.errorReason = futureError(actor.future);
     events{end+1, 1} = struct('type', 'error', ...
         'actorId', actor.actorId, ...
-        'errorReason', actor.errorReason); %#ok<AGROW>
+        'errorReason', actor.errorReason);
 end
 end
 
@@ -105,8 +98,6 @@ if actor.ringSourceSampleEnd >= actor.ringConsumedSampleEnd
 else
     actor.pendingInputSamples = uint64(0);
 end
-actor.maxPendingInputSamples = max( ...
-    actor.maxPendingInputSamples, actor.pendingInputSamples);
 end
 
 function reason = futureError(future)

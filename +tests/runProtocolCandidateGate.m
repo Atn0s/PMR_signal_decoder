@@ -60,13 +60,16 @@ registry = radio.stream.probeRegistry();
 mask = ~strcmp({registry.name}, 'TETRA');
 context = struct('StatusByProtocol', struct('DMR', 'confirmed'));
 handle = radio.stream.parallelProbeRaceStart(snapshot, [], ...
-    'Registry', registry, 'Mode', 'serial', ...
+    'Registry', registry, ...
     'CandidateMask', mask, ...
     'TaskFcn', @tests.fakeParallelProbeTask, ...
     'TaskContext', context);
 tetraIndex = find(strcmp({registry.name}, 'TETRA'), 1);
 assert(handle.states(tetraIndex).attemptCount == 0);
-assert(strcmp(handle.race.results(tetraIndex).status, 'rejected'));
-assert(strcmp(handle.race.outcome, 'confirmed'));
-assert(strcmp(handle.race.winner.protocol, 'DMR'));
+[handle, race] = radio.stream.parallelProbeRaceCollect( ...
+    handle, 'TimeoutSec', 10);
+assert(handle.completed);
+assert(strcmp(race.results(tetraIndex).status, 'rejected'));
+assert(strcmp(race.outcome, 'confirmed'));
+assert(strcmp(race.winner.protocol, 'DMR'));
 end
